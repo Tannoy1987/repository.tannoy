@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
+	<include name="Listcenter">
+		<animation effect="slide" end="0,490" time="0" condition="Integer.IsEqual(Container(50).NumItems,1)">conditional</animation>
+		<animation effect="slide" end="0,450" time="0" condition="Integer.IsEqual(Container(50).NumItems,2)">conditional</animation>
+		<animation effect="slide" end="0,410" time="0" condition="Integer.IsEqual(Container(50).NumItems,3)">conditional</animation>
+		<animation effect="slide" end="0,369" time="0" condition="Integer.IsEqual(Container(50).NumItems,4)">conditional</animation>
+		<animation effect="slide" end="0,328" time="0" condition="Integer.IsEqual(Container(50).NumItems,5)">conditional</animation>
+		<animation effect="slide" end="0,290" time="0" condition="Integer.IsEqual(Container(50).NumItems,6)">conditional</animation>
+		<animation effect="slide" end="0,250" time="0" condition="Integer.IsEqual(Container(50).NumItems,7)">conditional</animation>
+		<animation effect="slide" end="0,210" time="0" condition="Integer.IsEqual(Container(50).NumItems,8)">conditional</animation>
+		<animation effect="slide" end="0,170" time="0" condition="Integer.IsEqual(Container(50).NumItems,9)">conditional</animation>
+		<animation effect="slide" end="0,123" time="0" condition="Integer.IsEqual(Container(50).NumItems,10)">conditional</animation>
+		<animation effect="slide" end="0,81" time="0" condition="Integer.IsEqual(Container(50).NumItems,11)">conditional</animation>
+	</include>
 	<include name="Homecenter">
 		<animation effect="slide" end="0,-30" time="0" condition="Integer.IsEqual(Container(1000).NumItems,2)">conditional</animation>
 		<animation effect="slide" end="0,-60" time="0" condition="Integer.IsEqual(Container(1000).NumItems,3)">conditional</animation>

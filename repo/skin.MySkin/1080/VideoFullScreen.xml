@@ -7,7 +7,7 @@
 	<controls> 
   		<control type="group" id="2">
 			<visible>Skin.HasSetting(DV/HDRflags)</visible>
-            <visible>String.IsEqual(Window(home).Property(ShowDVLogo), true) + onAVStarted()</visible>
+            <visible>String.IsEqual(Window(home).Property(ShowDVLogo), true)</visible>
             <animation effect="fade" delay="300" time="200">Visible</animation>
             <animation effect="fade" delay="200" time="150">Hidden</animation>
             <right>-4</right>

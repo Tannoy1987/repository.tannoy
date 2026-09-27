@@ -72,8 +72,8 @@
 				</control>
 			</control>
 			<control type="grouplist">
-				<right>20</right>
-				<top>10</top>
+				<right>30</right>
+				<top>20</top>
 				<width>1440</width>
 				<height>60</height>
 			   <orientation>horizontal</orientation>

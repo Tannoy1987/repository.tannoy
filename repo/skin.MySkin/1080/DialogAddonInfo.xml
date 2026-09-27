@@ -4,7 +4,12 @@
     <onunload>ClearProperty(showinfo,addoninformation)</onunload>
 	<onload>AlarmClock(SetAddonButtons,SetFocus(9900),00:00,silent)</onload>
     <controls>
-        <include>DefaultBG</include>
+		<include content="DialogBackgroundCommons">
+			<param name="width" value="1920" />
+			<param name="height" value="1080" />
+			<param name="header_label" value="$INFO[Window(home).Property(TextViewer_Header)]" />
+			<param name="header_id" value="1" />
+		</include>
        <control type="group">	
             <include>R 2/3 Panel</include>
             <include>bg</include>

@@ -676,15 +676,15 @@
 			<control type="group">
 				<visible>Control.HasFocus(1000) + !Container(2000).IsUpdating</visible>	
 				<include content="bg">
-					<param name="bs" value="170,95,170,95" />
+					<param name="bs" value="70,10,70,10" />
 					<param name="vis" value="Integer.IsGreater(Container(2100).NumItems,0)" />
 				</include>
 				<control type="panel" id="2100">
 					<right>0</right>
 					<top>0</top>
-					<width>1824</width>
+					<width>1845</width>
 					<height>1080</height>
- 					<include content="SingleFSWidget">
+ 					<include content="SingleFSWidgetV2">
 						<param name="width" value="1824" />
 						<param name="height" value="1080" />
 						<param name="widget_target" value="videos" />
@@ -1528,69 +1528,69 @@
         </definition>    
     </include>
 	<include name="HomeLoad">
-	   <control type="image" id="950">
+	   <control type="image">
 		   <bottom>0</bottom>
 		   <left>0</left>
 		   <width>240</width>
 		   <height>3</height>
 		   <texture colordiffuse="button_focus">colors/white.png</texture>
-			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + !Integer.IsGreater(Container(2001).NumItems,0)</visible>
+			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + Container(2001).IsUpdating</visible>
 		</control>
-	    <control type="image" id="951">
+	    <control type="image">
 		   <bottom>0</bottom>
 		   <left>240</left>
 		   <width>240</width>
 		   <height>3</height>
 		   <texture colordiffuse="button_focus">colors/white.png</texture>
-			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + !Integer.IsGreater(Container(2002).NumItems,0)</visible>
+			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + Container(2002).IsUpdating</visible>
 		</control>
-	    <control type="image" id="952">
+	    <control type="image">
 		   <bottom>0</bottom>
 		   <left>480</left>
 		   <width>240</width>
 		   <height>3</height>
 		   <texture colordiffuse="button_focus">colors/white.png</texture>
-			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + !Integer.IsGreater(Container(2004).NumItems,0)</visible>
+			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + Container(2004).IsUpdating</visible>
 		</control>
-		<control type="image" id="954">
+		<control type="image">
 			<bottom>0</bottom>
 			<left>720</left>
 			<width>240</width>
 			<height>3</height>
 			<texture colordiffuse="button_focus">colors/white.png</texture>
-			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + !Integer.IsGreater(Container(2005).NumItems,0)</visible>
+			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + Container(2005).IsUpdating</visible>
 	   </control>
-	   <control type="image" id="953">
+	   <control type="image">
 	  	    <bottom>0</bottom>
 	  	    <right>720</right>
 	  	    <width>240</width>
 	  	    <height>3</height>
 	  	    <texture colordiffuse="button_focus">colors/white.png</texture>
-	  	    <visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + !Integer.IsGreater(Container(2007).NumItems,0)</visible>
+	  	    <visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + Container(2007).IsUpdating</visible>
 	  	</control>
-	  	<control type="image" id="955">
+	  	<control type="image">
 	  		<bottom>0</bottom>
 	  		<right>480</right>
 	  		<width>240</width>
 	  		<height>3</height>
 	  		<texture colordiffuse="button_focus">colors/white.png</texture>
-	  		<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + !Integer.IsGreater(Container(2008).NumItems,0)</visible>
+	  		<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + Container(2008).IsUpdating</visible>
 	  	</control>
-		<control type="image" id="956">
+		<control type="image">
 		    <bottom>0</bottom>
 		    <right>240</right>
 		    <width>240</width>
 		    <height>3</height>
 		    <texture colordiffuse="button_focus">colors/white.png</texture>
-			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + !Integer.IsGreater(Container(2013).NumItems,0)</visible>
+			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + Container(2013).IsUpdating</visible>
 		</control>
-		<control type="image" id="957">
+		<control type="image">
 		  	<bottom>0</bottom>
 		    <right>0</right>
 		    <width>240</width>
 		    <height>3</height>
 		    <texture colordiffuse="button_focus">colors/white.png</texture>
-			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + !Integer.IsGreater(Container(2014).NumItems,0)</visible>
+			<visible>String.IsEqual(Skin.String(home_layout),2) + ControlGroup(20000).HasFocus() + Container(2014).IsUpdating</visible>
 		</control>
 	</include>
 	<include name="HomeMouseMenu">

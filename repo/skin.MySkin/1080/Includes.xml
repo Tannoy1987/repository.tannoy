@@ -1401,7 +1401,7 @@
         <param name="right">0</param>
         <param name="width">auto</param>
         <param name="align">right</param>
-		<definition>          
+		<definition>     
    			<control type="grouplist" id="$PARAM[groupid]">
 			   <width>$PARAM[width]</width>
 			   <height>40</height>
@@ -1411,18 +1411,30 @@
 			   <itemgap>8</itemgap>
                <align>$PARAM[align]</align>
                <visible>String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)</visible>
-               <control type="label" id="601">
-                    <top>0</top>
-                    <left>0</left>
-                    <width>auto</width>
-                    <height>35</height>
-                    <aligny>center</aligny>
-                    <label>$INFO[ListItem.Status] ∙</label>					
-                    <shadowcolor>black</shadowcolor>
-                    <textcolor>grey</textcolor>
-                    <font>Reg26</font>
-                   	<visible>![Control.IsVisible(55) | String.IsEmpty(ListItem.Status)]</visible>
+               <control type="label" id="611">
+				   <top>0</top>
+				   <left>0</left>
+				   <width>auto</width>
+				   <height>35</height>
+				   <aligny>center</aligny>
+				   <label>$INFO[ListItem.Premiered] ∙</label>					
+				   <shadowcolor>black</shadowcolor>
+				   <textcolor>grey</textcolor>
+				   <font>Reg26</font>
+				   <visible>Container.Content(episodes) + ![Control.IsVisible(55) | String.IsEmpty(ListItem.Premiered)]</visible>
                 </control>
+				<control type="label" id="601">
+					 <top>0</top>
+					 <left>0</left>
+					 <width>auto</width>
+					 <height>35</height>
+					 <aligny>center</aligny>
+					 <label>$INFO[ListItem.Status] ∙</label>					
+					 <shadowcolor>black</shadowcolor>
+					 <textcolor>grey</textcolor>
+					 <font>Reg26</font>
+						<visible>![Control.IsVisible(55) | String.IsEmpty(ListItem.Status)]</visible>
+				 </control>
                <control type="label" id="605">
                     <top>0</top>
                     <left>0</left>
