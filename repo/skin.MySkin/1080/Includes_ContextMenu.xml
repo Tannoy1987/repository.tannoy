@@ -3,7 +3,6 @@
 	<include name="DialogContextMenuModern">
 		<!--Dialog Overlay-->
 		<control type="image">
-
 			<texture diffuse="diffuse/sb.png" border="16" colordiffuse="box">boxes/dbox.png</texture>
 			<animation effect="zoom" start="100" end="100.5" time="5" condition="Window.IsActive(home)">conditional</animation>
 			<animation effect="slide" start="0" end="-3,-3" time="0" condition="Window.IsActive(home)">conditional</animation>
@@ -11,7 +10,7 @@
 		</control>		
 		<control type="group">
 			<height>100%</height>
-    	    <width>540</width>
+    	    <width>590</width>
 			<animation effect="zoom" start="100" end="100.5" time="5" condition="Window.IsActive(home)">conditional</animation>
 			<animation effect="slide" start="0" end="-3,-3" time="0" condition="Window.IsActive(home)">conditional</animation>
 			<animation effect="slide" start="0" end="0,210" time="0" condition="Window.IsActive(visualisation)">conditional</animation>
@@ -23,34 +22,32 @@
 			</animation>
 		<!--Panel-->
 			<control type="image">
-				<posy>0</posy>
-				<posx>0</posx>
-				<bordersize>3,3,0,3</bordersize>
-				<width>490</width>
+
+				<right>10</right>
 				<height>1080</height>
 				<texture border="16" colordiffuse="button_focus">boxes/sbox.png</texture>
 			</control>
 		<!--Seperator-->			
             <control type="image">
-                <posx>13</posx>
+				<left>8</left>
                 <posy>77</posy>
-                <width>466</width>
+				<right>18</right>
                 <height>20</height>
                 <align>left</align>
                 <texture>boxes/menu-separator2.png</texture>
             </control>
 		<!--Seperator-->			
 			<control type="image">
-                <posx>13</posx>
+				<left>8</left>
                 <posy>1000</posy>
-                <width>466</width>
+				<right>18</right>
                 <height>20</height>
                 <align>left</align>
                 <texture>boxes/menu-separator2.png</texture>
             </control>						
             <control type="grouplist" id="996">
-                <width>466</width>
-                <posx>13</posx>
+				<right>20</right>
+				<left>11</left>
                 <posy>90</posy>
 				<onright>Dialog.Close(contextmenu)</onright>
                 <height>900</height>

@@ -500,16 +500,6 @@
 	<include name="SingleFSWidgetV2">
 		<definition>
 			<itemlayout width="$PARAM[width]" height="$PARAM[height]">
-
-
-<!--
-				 <control type="image">
-						<top>758</top>	
-						<height>214</height>
-						<left>681</left>	
-						<width>959</width>	
-					<texture colordiffuse="57ffffff">boxes/panel.png</texture>
-				</control>				 -->
 				<control type="group">
 					<left>5</left>	
 					<top>80</top>	
@@ -539,7 +529,7 @@
 				    <height>125</height>		
 					<right>75</right>
 				    <aligny>center</aligny>
-       	    	    <font>title2</font>
+       	    	    <font>title3</font>
        	    	    <align>center</align>
        	    	    <label>$INFO[ListItem.Title]</label>
 					<font>Reg26</font>

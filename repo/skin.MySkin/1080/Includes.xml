@@ -7,7 +7,7 @@
 	<include file="Includes_Buttons.xml" />
 	<include file="Includes_MediaFlags.xml" />
 	<include file="Includes_Dimensions.xml" />
-	<include file="Includes_Music.xml" />
+	<include condition="Skin.HasSetting(cd)" file="Includes_Music.xml" />
 	<include file="Includes_PVR.xml" />
 	<include file="Includes_Home.xml" />
 	<include file="Includes_ContextMenu.xml" />
