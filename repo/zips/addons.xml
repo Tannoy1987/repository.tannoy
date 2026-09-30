@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<addons><addon id="plugin.video.filester" name="Filester" version="1.0.0" provider-name="Tannoy">
+<addons><addon id="plugin.video.filester" name="Filester" version="1.0.1" provider-name="Tannoy">
     <requires>
         <import addon="xbmc.python" version="3.0.0" />
     </requires>
@@ -46,7 +46,7 @@
             <icon>icon.png</icon>
         </assets>
     </extension>
-</addon><addon id="skin.MySkin" version="0.4.9" name="MySkin" provider-name="Tannoy">
+</addon><addon id="skin.MySkin" version="0.4.95" name="MySkin" provider-name="Tannoy">
 	<requires>
 		<import addon="xbmc.gui" version="5.17.0" />
 		<import addon="xbmc.python" version="3.0.0" />

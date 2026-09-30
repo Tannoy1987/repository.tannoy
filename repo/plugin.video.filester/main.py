@@ -48,10 +48,14 @@ BACKOFF_BASE = 2.0
 BACKOFF_MAX = 8.0
 MAX_FOLDER_NAME_LEN = 100
 
+LISTING_REVALIDATE_SECONDS = 30
+
 ALLOWED_IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
 MAX_THUMB_SIZE = 5 * 1024 * 1024  # 5 MB
 
 SESSION_THUMB_PREFIX = "Filester.FolderThumb."
+
+PLACEHOLDER_THUMB_PATHS = ('/img/meta.png',)
 
 
 # ---------------------------------------------------------------------------
@@ -102,18 +106,30 @@ def jittered_backoff(attempt: int, retry_after: Optional[float] = None) -> float
     return base * (0.5 + random.random() * 0.5)
 
 
+def is_placeholder_thumb(url: Optional[str]) -> bool:
+    if not url:
+        return False
+    path = url.split('?', 1)[0].rstrip('/')
+    return path.endswith(PLACEHOLDER_THUMB_PATHS)
+
+
 def inline_thumbnail(item: Dict[str, Any]) -> Optional[str]:
     thumb = item.get('thumbnail_url')
     if thumb:
         if thumb.startswith('http'):
-            return thumb
-        if thumb.startswith('/'):
-            return f"{SITE_BASE}{thumb}"
-        return f"{SITE_BASE}/{thumb}"
+            resolved = thumb
+        elif thumb.startswith('/'):
+            resolved = f"{SITE_BASE}{thumb}"
+        else:
+            resolved = f"{SITE_BASE}/{thumb}"
+        if not is_placeholder_thumb(resolved):
+            return resolved
 
     ident = item.get('uuid') or item.get('file_uuid') or item.get('slug')
     if ident:
-        return f"{SITE_BASE}/t/{ident}"
+        candidate = f"{SITE_BASE}/t/{ident}"
+        if not is_placeholder_thumb(candidate):
+            return candidate
 
     return None
 
@@ -136,12 +152,17 @@ def extract_folder_thumb(folder: Dict[str, Any]) -> Optional[str]:
         if not val:
             continue
         if isinstance(val, str):
-            return absolute_thumb_url(val)
+            resolved = absolute_thumb_url(val)
+            if not is_placeholder_thumb(resolved):
+                return resolved
+            continue
         if isinstance(val, dict):
             for sub in ('url', 'path', 'src', 'href'):
                 subval = val.get(sub)
                 if subval:
-                    return absolute_thumb_url(str(subval))
+                    resolved = absolute_thumb_url(str(subval))
+                    if not is_placeholder_thumb(resolved):
+                        return resolved
     return None
 
 
@@ -196,6 +217,16 @@ class TTLCache:
             self._store.move_to_end(key)
             return value
 
+    def get_with_age(self, key: str) -> Optional[Tuple[float, Any]]:
+        """Return (age_seconds, value) ignoring TTL, or None if missing."""
+        with self._lock:
+            entry = self._store.get(key)
+            if entry is None:
+                return None
+            ts, value = entry
+            self._store.move_to_end(key)
+            return (time.time() - ts, value)
+
     def set(self, key: str, value: Any) -> None:
         with self._lock:
             self._store[key] = (time.time(), value)
@@ -235,6 +266,9 @@ class FilesterAPI:
 
         self._inflight: Dict[str, threading.Lock] = {}
         self._inflight_lock = threading.Lock()
+
+        self._revalidating: set = set()
+        self._reval_lock = threading.Lock()
 
     @staticmethod
     def _prompt_api_key() -> Optional[str]:
@@ -289,6 +323,20 @@ class FilesterAPI:
             log(f"Failed to read cache {path}: {e}")
         return None
 
+    def _read_disk_cache_raw(self, url: str) -> Optional[Tuple[float, Any]]:
+        if not self.cache_enabled:
+            return None
+        path = self._cache_file_path(url)
+        if not xbmcvfs.exists(path):
+            return None
+        try:
+            with xbmcvfs.File(path, 'r') as f:
+                payload = json.loads(f.read())
+            return (payload.get('timestamp', 0), payload.get('data'))
+        except Exception as e:
+            log(f"Failed to read cache {path}: {e}")
+        return None
+
     def _write_disk_cache(self, url: str, data: Dict[str, Any]) -> None:
         if not self.cache_enabled:
             return
@@ -315,6 +363,18 @@ class FilesterAPI:
         if cached is not None:
             self._memory_cache.set(url, cached)
             return cached
+        return None
+
+    def _peek_cache(self, url: str) -> Optional[Tuple[float, Any]]:
+        """Return (age, data) for cached payload, ignoring TTL."""
+        entry = self._memory_cache.get_with_age(url)
+        if entry is not None:
+            return entry
+        raw = self._read_disk_cache_raw(url)
+        if raw is not None:
+            ts, data = raw
+            self._memory_cache.set(url, data)
+            return (time.time() - ts, data)
         return None
 
     def _store_caches(self, url: str, payload: Dict[str, Any]) -> None:
@@ -382,6 +442,61 @@ class FilesterAPI:
             payload = self._http_call(url, method, data, retries)
             self._store_caches(url, payload)
             return payload
+
+    def request_swr(
+        self,
+        endpoint: str,
+        method: str = 'GET',
+        data: Optional[Dict[str, Any]] = None,
+        retries: int = MAX_RETRIES,
+        revalidate_seconds: int = LISTING_REVALIDATE_SECONDS,
+    ) -> Dict[str, Any]:
+        """Stale-while-revalidate: return cached immediately; if stale,
+        revalidate in the background and refresh the container if changed."""
+        url = endpoint if endpoint.startswith('http') else f"{API_BASE}{endpoint}"
+
+        if method != 'GET' or not self.cache_enabled:
+            return self._http_call(url, method, data, retries)
+
+        cached = self._peek_cache(url)
+        if cached is None:
+            with self._lock_for(url):
+                cached = self._peek_cache(url)
+                if cached is None:
+                    payload = self._http_call(url, method, data, retries)
+                    self._store_caches(url, payload)
+                    return payload
+            return cached[1]
+
+        age, cached_data = cached
+        if age >= revalidate_seconds:
+            self._schedule_revalidation(url, method, data, retries, cached_data)
+        return cached_data
+
+    def _schedule_revalidation(
+        self, url: str, method: str,
+        data: Optional[Dict[str, Any]], retries: int,
+        old_data: Dict[str, Any],
+    ) -> None:
+        with self._reval_lock:
+            if url in self._revalidating:
+                return
+            self._revalidating.add(url)
+
+        def worker() -> None:
+            try:
+                fresh = self._http_call(url, method, data, retries)
+                if fresh != old_data:
+                    self._store_caches(url, fresh)
+                    log(f"SWR: content changed for {url} — refreshing")
+                    xbmc.executebuiltin("Container.Refresh")
+            except Exception as e:
+                log(f"SWR revalidation failed for {url}: {e}", xbmc.LOGWARNING)
+            finally:
+                with self._reval_lock:
+                    self._revalidating.discard(url)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _http_call(
         self,
@@ -454,19 +569,19 @@ class FilesterAPI:
         raise last_error
 
     def get_folders(self) -> List[Dict[str, Any]]:
-        return self.request("/folders").get('data', []) or []
+        return self.request_swr("/folders").get('data', []) or []
 
     def get_files(self, page: int = 1,
                   folder_id: Optional[str] = None) -> Dict[str, Any]:
         params = {'page': page, 'per_page': PER_PAGE}
         if folder_id:
             params['folder'] = folder_id
-        return self.request(f"/files?{urllib.parse.urlencode(params)}")
+        return self.request_swr(f"/files?{urllib.parse.urlencode(params)}")
 
     def get_folder_files(self, folder_identifier: str,
                          page: int = 1) -> Dict[str, Any]:
         folder = quote_param(folder_identifier)
-        return self.request(
+        return self.request_swr(
             f"/folder/{folder}/files?page={page}&per_page={PER_PAGE}"
         )
 
@@ -539,6 +654,9 @@ class FilesterAPI:
             if m:
                 thumb = m.group(1)
                 resolved = absolute_thumb_url(thumb)
+                if is_placeholder_thumb(resolved):
+                    log(f"Ignoring placeholder og:image for {folder_id}")
+                    return None
                 log(f"Public folder thumb for {folder_id}: {resolved}")
                 return resolved
 
@@ -738,6 +856,8 @@ class FilesterAPI:
         self._thumbnail_cache.clear()
         with self._inflight_lock:
             self._inflight.clear()
+        with self._reval_lock:
+            self._revalidating.clear()
 
         deleted = 0
         try:
@@ -802,13 +922,10 @@ class DirectoryHandler:
         return str(fid) if fid is not None else None
 
     def _get_all_folders(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
-        if (not force_refresh
-                and self._all_folders is not None
-                and self.api.is_cache_valid(self._folder_cache_time)):
-            return self._all_folders
+        if force_refresh:
+            self.api.invalidate_folders_cache()
         try:
             self._all_folders = self.api.get_folders()
-            self._folder_cache_time = time.time()
         except Exception as e:
             log(f"get_folders failed: {e}", xbmc.LOGERROR)
             if self._all_folders is not None:
