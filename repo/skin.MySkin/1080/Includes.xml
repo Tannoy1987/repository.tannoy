@@ -7,7 +7,7 @@
 	<include file="Includes_Buttons.xml" />
 	<include file="Includes_MediaFlags.xml" />
 	<include file="Includes_Dimensions.xml" />
-	<include condition="Skin.HasSetting(cd)" file="Includes_Music.xml" />
+	<include file="Includes_Music.xml" />
 	<include file="Includes_PVR.xml" />
 	<include file="Includes_Home.xml" />
 	<include file="Includes_ContextMenu.xml" />
@@ -21,7 +21,7 @@
 			<animation effect="zoom" start="100" end="150" time="0" condition="Control.HasFocus(1000)">conditional</animation>
 			<bordersize>-7</bordersize>
 			<texture colordiffuse="button_focus" diffuse="diffuse/sb.png">special://skin/extras/backgrounds/primary0.png</texture>
-			<visible>![ControlGroup(20000).HasFocus() | ControlGroup(50000).HasFocus() | ControlGroup(2000).HasFocus()]</visible>
+			<visible>![String.IsEqual(Container(1000).ListItem.Property(id),POV) | String.IsEqual(Container(1000).ListItem.Property(id),videos)]</visible>
 		</control> 
 		 <control type="image">
 			<bordersize>-7</bordersize>
@@ -83,6 +83,9 @@
 		<!--<include>test</include>-->
 	</include>
     <include name="DefaultBG">
+		<control type="image">
+			<texture>colors/black.png</texture>
+		</control>	
         <include>CommonScrollbars</include>
         <include>background</include>
         <include>tv</include>
@@ -1283,12 +1286,12 @@
 		<include content="box">
 			<param name="texture" value="tdarkbox" />		
 			<param name="bs" value="0" />		
-			<param name="vis" value="Player.HasVideo + Control.IsVisible(531)" />		
+			<param name="vis" value="[Player.HasVideo + Control.IsVisible(531)] + !Control.IsVisible(860)" />		
 		</include>
 		<include content="box">
 			<param name="texture" value="tdarkbox" />		
 			<param name="bs" value="-4" />		
-			<param name="vis" value="Player.HasVideo + ![Window.IsActive(movieinformation) | Control.IsVisible(531) | Control.HasFocus(1000) | ControlGroup(2000).HasFocus() | ControlGroup(5000).HasFocus()]" />		
+			<param name="vis" value="[Player.HasVideo + ![Window.IsActive(movieinformation) | Control.IsVisible(531) | Control.HasFocus(1000) | ControlGroup(2000).HasFocus() | ControlGroup(5000).HasFocus()]] + !Control.IsVisible(860)" />		
 		</include>
 	</include>
 	<include name="Content">
@@ -1543,6 +1546,8 @@
         </control>
     </include>
     <include name="tvs">
+        <animation effect="zoom" end="49.2" center="0%,0%" delay="0" tween="sine" time="0" condition="Player.HasVideo + Window.IsActive(videos) + Control.IsVisible(860)">conditional</animation>
+        <animation effect="slide" end="1966,556" time="0" tween="sine" easing="in" condition="Player.HasVideo + Window.IsActive(videos) + Control.IsVisible(860)">conditional</animation>
         <animation effect="zoom" end="97.75" center="0%,0%" delay="0" tween="sine" time="0" condition="Player.HasVideo + Window.IsActive(tvguide)">conditional</animation>
         <animation effect="slide" end="7,4" time="0" tween="sine" easing="in" condition="Player.HasVideo + Window.IsActive(tvguide)">conditional</animation>
         <animation effect="zoom" end="99.25" center="0%,1%" delay="0" tween="sine" time="0" condition="IsSettingsOrMediaWindow">conditional</animation>

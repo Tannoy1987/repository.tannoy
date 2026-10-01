@@ -388,6 +388,8 @@
 			<onback condition="Control.IsVisible(55)">55</onback>
 			<onright condition="Control.IsVisible(840)">840</onright>
 			<onback condition="Control.IsVisible(840)">840</onback>
+			<onright condition="Control.IsVisible(860)">860</onright>
+			<onback condition="Control.IsVisible(860)">860</onback>
 			<control type="label" id="200">
 				<include>MediaMenuLabelCommon</include>
 				<label>$LOCALIZE[14018]</label>
@@ -407,6 +409,14 @@
 				<visible>Control.IsVisible(640)</visible>
 				<onclick condition="String.IsEmpty(Skin.String(grid_layout)) | String.IsEqual(Skin.String(grid_layout),6)">Skin.SetString(grid_layout,3)</onclick>
 				<onclick condition="String.IsEqual(Skin.String(grid_layout),3)">Skin.SetString(grid_layout,6)</onclick>
+			</control>
+			<control type="button" id="6059">
+				<include>MediaMenuItemsCommon</include>
+				<label>test</label>
+				<label2>[B]$VAR[50/50_layout][/B]</label2>
+				<visible>Control.IsVisible(860)</visible>
+				<onclick condition="String.IsEmpty(Skin.String(50/50_layout)) | String.IsEqual(Skin.String(50/50_layout),1)">Skin.SetString(50/50_layout,2)</onclick>
+				<onclick condition="String.IsEqual(Skin.String(50/50_layout),2)">Skin.SetString(50/50_layout,1)</onclick>
 			</control>
 			<control type="button" id="6053">
 				<include>MediaMenuItemsCommon</include>

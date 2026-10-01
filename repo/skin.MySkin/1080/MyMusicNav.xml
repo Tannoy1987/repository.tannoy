@@ -88,7 +88,7 @@
 						<right>0</right>
 						<left>0</left>
 						<bottom>440</bottom>
-						<aspectratio>scale</aspectratio>
+				
 						<texture diffuse="diffuse/cdtop.png">$VAR[musicthumbnails]</texture>
 					</control>					
 					<control type="group">
@@ -99,7 +99,7 @@
 						<control type="image">
 							<texture border="5">boxes/inner.png</texture>
 						</control>
-						<control type="textbox" id="6040">
+						<!-- <control type="textbox" id="6040">
 							<right>20</right>
 							<top>2</top>
 							<left>20</left>
@@ -124,8 +124,67 @@
 							<label>$VAR[MusicAlbumInfoVar][CR]$VAR[ListBoxInfoVar]</label>
 							<visible>!Container.Content(songs)</visible>									
 							<visible>!Container.Scrolling</visible>
-						</control>
-					</control>	
+						</control> -->
+						<control type="group">
+							<bottom>62</bottom>
+							<height>362</height>
+							<left>10</left>
+							<right>10</right>
+							<control type="grouplist">
+								<height>480</height>
+								<itemgap>20</itemgap>
+								<align>center</align>
+								<control type="label">
+									<left>10</left>
+									<right>10</right>
+									<height>40</height>
+									<align>center</align>
+									<font>Reg38</font>
+									<label>$INFO[ListItem.Artist]</label>
+            				        <autoscroll delay="2000" time="2000" repeat="500">true</autoscroll>
+            				    </control>
+            				    <control type="textbox">
+            				        <left>10</left>
+            				        <right>10</right>
+            				        <height min="40" max="120">auto</height>
+            				        <align>center</align>
+            				        <aligny>center</aligny>
+            				        <font>Reg38</font>
+            				        <label>[COLOR button_focus]$INFO[ListItem.Title][/COLOR]</label>
+            				        <autoscroll delay="2000" time="2000" repeat="500">true</autoscroll>
+									<visible>!Container.Content(albums)</visible>
+            				    </control>
+            				    <control type="label">
+            				        <left>10</left>
+            				        <right>10</right>
+            				        <height>40</height>
+            				        <align>center</align>
+            				        <font>Reg32</font>
+            				        <label>$INFO[ListItem.Album]$INFO[ListItem.Year, ∙ ]</label>
+            				        <autoscroll delay="2000" time="2000" repeat="500">true</autoscroll>
+            				    </control>
+            				    <control type="label">
+            				        <left>10</left>
+            				        <right>10</right>
+            				        <height>40</height>
+            				        <align>center</align>
+            				        <font>Reg32</font>
+            				        <label>$LOCALIZE[427] $INFO[ListItem.DiscNumber]</label>
+            				        <visible>!String.IsEmpty(ListItem.DiscNumber)</visible>
+            				        <textcolor>grey</textcolor>                    
+            				    </control>
+            				    <control type="label">
+            				        <left>10</left>
+            				        <right>10</right>
+            				        <height>40</height>
+            				        <align>center</align>
+            				        <font>Reg26</font>
+            				        <label>$INFO[ListItem.Time,,/]$INFO[ListItem.Duration]</label>
+            				        <textcolor>grey</textcolor>
+            				    </control>
+            				</control>  
+						</control>	
+					</control>
 					<include>MediaFlags</include>	
 				</control>
 				<control type="group">

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window>
-	<defaultcontrol>640</defaultcontrol>
-	<views>640,51,52,53,840,50,55</views>
+	<defaultcontrol always="true">640</defaultcontrol>
+	<views>640,51,52,53,840,860,50,55</views>
 	<menucontrol>9000</menucontrol>
 	<controls>
 		<include>DefaultBG</include>
@@ -10,6 +10,7 @@
 			<include>GridLayout</include>
 			<include>View_List</include> 
 			<include>DynamicLayout</include>
+			<include>50/50</include>
 			<include>MediaMenuMouseOverlay</include> 
 			<control type="group">
 				<include>MediaMenuCommon</include>

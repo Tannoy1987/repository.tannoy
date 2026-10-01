@@ -55,10 +55,10 @@
         <height>1054</height>
     </include>
     <include name="L 50/50 Panel">
-        <left>13</left>
-        <top>13</top>
-        <width>947</width>
-        <height>1054</height>
+        <left>0</left>
+        <top>0</top>
+        <width>960</width>
+        <height>1080</height>
     </include>
     <include name="R 50/50 Panel">
         <right>13</right>

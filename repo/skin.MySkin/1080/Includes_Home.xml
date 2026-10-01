@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
 	<include name="HomePanel">
+
 		<control type="list" id="1000">
 			<include>OpenClose_Left</include>
 			<include>Homecenter</include>
@@ -675,6 +676,7 @@
 			<!--Home-->
 			<control type="group">
 				<visible>Control.HasFocus(1000) + !Container(2000).IsUpdating</visible>	
+
 				<include content="bg">
 					<param name="bs" value="70,10,70,10" />
 					<param name="vis" value="Integer.IsGreater(Container(2100).NumItems,0)" />
@@ -694,6 +696,7 @@
 						<param name="content_path" value="plugin://plugin.video.pov/?name=32483&mode=build_next_episode" />
 					</include>	
 				</control>
+				
 			</control>
 	    	<control type="grouplist" id="2000">
 				<height>354</height>

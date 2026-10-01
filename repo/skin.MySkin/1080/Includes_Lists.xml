@@ -501,33 +501,35 @@
 		<definition>
 			<itemlayout width="$PARAM[width]" height="$PARAM[height]">
 				<control type="group">
-					<left>5</left>	
-					<top>80</top>	
-					<control type="image">					
-						<height>720</height>
-						<width>480</width>
-						<aspectratio aligny="center" align="center">scale</aspectratio>         
-						<texture>$INFO[ListItem.Art(poster)]</texture>
-					</control>					
+					<right>-21</right>	
+					<top>0</top>	
+				
 					<control type="image">
-						<height>540</height>
-						<left>480</left>	
-						<width>960</width>				
+						<right>0</right>
+						<height>757</height>
+						<width>1345</width>				
 						<texture>colors/black.png</texture>
 					</control>
 					<control type="image">
-						<height>720</height>
-						<left>480</left>	
-						<width>1280</width>							
+						<right>0</right>
+						<height>757</height>
+						<width>1345</width>							
 						<texture fallback="$INFO[ListItem.Art(fanart)]">$PARAM[poster]</texture>
-						<aspectratio>keep</aspectratio>
+						<aspectratio aligny="center" align="right">keep</aspectratio>
 					</control>
-				</control>		
+				</control>	
+				<control type="image">	
+							<right>1320</right>
+						<height>757</height>
+						<width>520</width>
+						<aspectratio aligny="center" align="right">keep</aspectratio>         
+						<texture>$INFO[ListItem.Art(poster)]</texture>
+					</control>		
 				<control type="textbox">	
-					<top>780</top>
+					<top>770</top>
        			  	<left>15</left>
-				    <height>125</height>		
-					<right>75</right>
+				    <height>110</height>		
+					<right>0</right>
 				    <aligny>center</aligny>
        	    	    <font>title3</font>
        	    	    <align>center</align>
@@ -541,7 +543,7 @@
 					<top>855</top>	
 					<bottom>11</bottom>
 					<left>15</left>	
-					<right>75</right>	
+					<right>0</right>	
 				    <aligny>center</aligny>
        	    	    <font>Reg30</font>
        	    	    <align>center</align>
@@ -555,11 +557,12 @@
       				<texturebg />
             	    <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
             	    <left>7</left>
-            	    <top>794</top>
+            	    <top>749</top>
             	    <description>progress bar</description>
-            	    <right>47</right>
+            	    <right>0</right>
             	    <info>ListItem.PercentPlayed</info>
            	    </control>
+			
 			</itemlayout>
 			<focusedlayout />
 			<content target="$PARAM[widget_target]" limit="1" sortorder="$PARAM[sortorder]" sortby="$PARAM[sortby]">$PARAM[content_path]</content>

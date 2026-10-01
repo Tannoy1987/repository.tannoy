@@ -851,7 +851,7 @@
 				<align>center</align>
 				<aligny>center</aligny>
 				<font>flags</font>
-				<textcolor>button_focus</textcolor>
+			
 				<label>$PARAM[flag_label]</label>
 				<texturefocus border="0" infill="false" colordiffuse="white">$PARAM[texture]</texturefocus>
 				<texturenofocus border="0" infill="false" colordiffuse="white">$PARAM[texture]</texturenofocus>
@@ -885,7 +885,7 @@
 					<usecontrolcoords>true</usecontrolcoords>
 					<include content="MediaFlag">
 						<param name="flag_visible" value="!String.IsEmpty(ListItem.FileExtension)" />
-						<param name="flag_label" value="$INFO[ListItem.FileExtension]" />
+						<param name="flag_label" value="$VAR[AudioCodecVar]" />
 					</include>
 					<include content="MediaFlag">
 						<param name="flag_visible" value="!String.IsEmpty(ListItem.MusicChannels)" />
@@ -902,10 +902,6 @@
 					<include content="MediaFlag">
 						<param name="flag_visible" value="!String.IsEmpty(ListItem.MusicBitsPerSample)" />
 						<param name="flag_label" value="$INFO[ListItem.MusicBitsPerSample, ,bit]" />
-					</include>
-					<include content="MediaFlag">
-						<param name="flag_visible" value="!String.IsEmpty(ListItem.BMP)" />
-						<param name="flag_label" value="$INFO[ListItem.BMP, ,bpm]" />
 					</include>
 				</control>
 				<control type="grouplist">

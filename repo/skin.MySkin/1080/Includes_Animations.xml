@@ -21,6 +21,7 @@
 		<animation effect="slide" end="0,-150" time="0" condition="Integer.IsEqual(Container(1000).NumItems,6)">conditional</animation>
 		<animation effect="slide" end="0,-180" time="0" condition="Integer.IsEqual(Container(1000).NumItems,7)">conditional</animation>
 	</include>
+
 	<include name="infocenter">
 		<animation effect="slide" end="838,0" time="0" condition="Integer.IsEqual(Container(50).NumItems,1)">conditional</animation>
 		<animation effect="slide" end="716,0" time="0" condition="Integer.IsEqual(Container(50).NumItems,2)">conditional</animation>
@@ -50,6 +51,7 @@
 		<animation effect="slide" end="0,40" time="0" condition="Integer.IsEqual(Container(41).NumItems,4)">conditional</animation>
 		<animation effect="slide" end="0,20" time="0" condition="Integer.IsEqual(Container(41).NumItems,5)">conditional</animation>
 	</include>
+
 
 
 

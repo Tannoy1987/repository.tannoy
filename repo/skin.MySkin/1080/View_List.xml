@@ -15,7 +15,7 @@
     <include name="infopanel50">
         <control type="group">
             <visible>![Container.Content(files) | Container.Content(videos)]</visible>
-            <visible>Control.IsVisible(50) | ![Control.HasFocus(531) | Control.IsVisible(51) | Control.IsVisible(52) | Control.IsVisible(53) | Control.IsVisible(55) | Control.IsVisible(640) | Control.IsVisible(840)]</visible>
+            <visible>Control.IsVisible(50) | ![Control.HasFocus(531) | Control.IsVisible(51) | Control.IsVisible(52) | Control.IsVisible(53) | Control.IsVisible(55) | Control.IsVisible(640) | Control.IsVisible(840) | Control.IsVisible(860)]</visible>
             <include>R 2/3 Panel</include>
             <include>bg</include>
             <control type="group">
@@ -113,7 +113,7 @@
 
         <control type="group">
             <visible>![Container.Content(files) | Window.IsActive(addonbrowser) | Container.Content(videos) | Window.IsActive(tvchannels)]</visible>
-            <visible>Control.IsVisible(55) | ![Control.HasFocus(531) | Control.IsVisible(50) | Control.IsVisible(51) | Control.IsVisible(52) | Control.IsVisible(53) | Control.IsVisible(640) | Control.IsVisible(840)]</visible>
+            <visible>Control.IsVisible(55) | ![Control.HasFocus(531) | Control.IsVisible(50) | Control.IsVisible(51) | Control.IsVisible(52) | Control.IsVisible(53) | Control.IsVisible(640) | Control.IsVisible(840) | Control.IsVisible(860)]</visible>
             <include>R 1/3 Panel</include>
             <include>bg</include>
                     <control type="image" id="1112">

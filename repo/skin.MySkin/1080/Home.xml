@@ -12,10 +12,12 @@
 	<onload condition="String.IsEmpty(Skin.String(mediaflags_layout))">Skin.SetString(mediaflags_layout,1)</onload>
 	<onload condition="String.IsEmpty(Skin.String(addon_widget_size))">Skin.SetString(addon_widget_size,3)</onload>
 	<onload condition="String.IsEmpty(Skin.String(cd_color))">Skin.SetString(cd_color,1)</onload>
+	<onload condition="String.IsEmpty(Skin.String(50/50_layout))">Skin.SetString(50/50_layout,1)</onload>
 	<defaultcontrol>1000</defaultcontrol>
 	<controls>
 		<include>HomeLoad</include>
 		<include>DefaultBGNSB</include>
+
 		<control type="group" id="100">
 			<include>DA</include>			
 			<control type="group" id="101">
@@ -31,6 +33,7 @@
 			</control>
 			<include>HomePanel</include>
 			<include>HomeMouseMenu</include>
+			<include>crt</include>
 		</control>
 	</controls>
 </window>

@@ -251,15 +251,15 @@
 		</definition>
 	</include>
 	<include name="InfoDialogToggleButton">
-		<param name="width">262</param>
+		<param name="width">80</param>
 		<definition>
 			<control type="radiobutton" id="$PARAM[id]">
 				<width>$PARAM[width]</width>
-				<height>122</height>
+				<height>80</height>
 				<align>center</align>
-				<aligny>top</aligny>
-				<texturefocus colordiffuse="button_focus" border="10">boxes/box2.png</texturefocus>
-				<texturenofocus colordiffuse="button_focus" border="10">boxes/box3.png</texturenofocus>
+				<aligny>center</aligny>
+				<texturefocus colordiffuse="button_focus">osd/bingie/trailer.png</texturefocus>
+				<texturenofocus>osd/bingie/trailer.png</texturenofocus>
 				<textoffsetx>35</textoffsetx>
 				<textoffsety>78</textoffsety>
 				<radioposx>108</radioposx>

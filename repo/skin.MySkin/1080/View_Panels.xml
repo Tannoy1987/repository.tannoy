@@ -1259,6 +1259,114 @@
             </control>
         </control> 
     </include>
+    <include name="50/50">
+        <control type="group">
+            <visible>Control.IsVisible(860)</visible>
+            <include content="bg">
+				<param name="bs" value="965,10,10,10" />
+            </include>
+            <control type="group">  
+                <left>970</left>  
+                <right>10</right>
+                <top>10</top>
+                <bottom>20</bottom>              
+                <control type="textbox">
+                    <height>160</height>
+                    <right>10</right>
+                    <top>800</top>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <font>reg38</font>
+                    <label>$INFO[ListItem.Label]</label>
+                    <visible>!Player.HasVideo</visible>
+                </control>
+                <control type="textbox">
+                    <height>270</height>
+                    <right>10</right>
+                    <top>810</top>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <font>reg38</font>
+                    <label>$INFO[Player.Title]</label>
+                    <visible>Player.HasVideo</visible>
+                </control>
+                <control type="image">
+                    <right>10</right>
+                    <bottom>275</bottom>
+                    <texture fallback="$INFO[ListItem.Art(fanart)]">$INFO[ListItem.Art(thumb)]</texture>
+                    <aspectratio align="center" aligny="bottom">keep</aspectratio>
+                    <visible>!Player.HasVideo</visible>
+                </control>
+                <include>mediaflags</include>
+            </control>     
+            <control type="panel" id="860">
+                <include>L 50/50 Panel</include>  
+                <onup>860</onup>
+                <ondown>860</ondown>
+                <onleft>9000</onleft>
+                <onright>531</onright>
+                <onback>ClearProperty(ListAnimation,home)</onback>
+                <viewtype label="Video (860)">Video</viewtype>
+                <orientation>vertical</orientation>
+                <preloaditems>4</preloaditems>
+                <scrolltime tween="sine">150</scrolltime>
+                <pagecontrol>531</pagecontrol>
+                <visible>Container.Content(videos)</visible>
+                <itemlayout width="480" height="270" condition="String.IsEqual(Skin.String(50/50_layout),1)">
+                	<include content="bg">
+			    	    <param name="bs" value="5" />
+			        </include>
+                    <include>DynamicPanel</include>
+                    <include content="filesterfolders">
+                        <param name="top" value="5" />
+                        <param name="left" value="16" />
+                        <param name="ft" value="5" />
+                        <param name="fl" value="7" />
+                     </include>
+                </itemlayout>
+                <focusedlayout width="480" height="270" condition="String.IsEqual(Skin.String(50/50_layout),1)">
+                    <include>DynamicFocusPanel</include>
+                    <include content="filesterfolders">
+                        <param name="top" value="12" />
+                        <param name="left" value="23" />
+                        <param name="tc" value="button_focus" />
+                        <param name="ft" value="15" />
+                        <param name="fl" value="17" />
+                        <param name="fcd" value="button_focus" />
+                    </include>
+                </focusedlayout>    
+                <itemlayout width="960" height="90" condition="String.IsEqual(Skin.String(50/50_layout),2)">
+                	<include content="bg">
+			    	    <param name="bs" value="5" />
+			        </include>
+                	<control type="label">
+			        	<left>20</left>
+			        	<right>20</right>
+			        	<height>90</height>
+                        <bottom>4</bottom>
+			        	<align>center</align>
+			        	<aligny>center</aligny>
+			        	<label>$INFO[ListItem.Label]</label>			
+			        </control>
+                </itemlayout>
+                <focusedlayout width="960" height="90" condition="String.IsEqual(Skin.String(50/50_layout),2)">
+		            <include content="focusbox">
+			        	<param name="bs" value="5" />
+			        </include>
+     		    	<control type="textbox">
+			        	<left>20</left>
+			        	<right>20</right>
+			        	<height>90</height>
+                        <bottom>4</bottom>
+			        	<align>center</align>
+			        	<aligny>center</aligny>
+			        	<label>$INFO[ListItem.Label]</label>
+		                <textcolor>black</textcolor>
+			        </control>
+                </focusedlayout>    
+            </control>
+        </control> 
+    </include>   
     <include name="panellayout">
         <param name="top">170</param>
         <param name="bs">5</param>
@@ -1337,6 +1445,7 @@
                 <aligny>center</aligny>
                 <font>font12</font>
                 <label>$INFO[ListItem.Label]</label>
+                <visible>!Container.Content()</visible> 
 				<visible>Window.IsActive(music) + Control.IsVisible(640)</visible>
                 <scroll>true</scroll>
             </control>    
@@ -1349,7 +1458,19 @@
                 <aligny>center</aligny>
                 <font>reg25</font>
                 <label>$INFO[ListItem.Label]</label>
+ <visible>!Container.Content()</visible>
                 <visible>!Window.IsActive(music)</visible>
+            </control>
+            <control type="textbox">
+                <height>$PARAM[height]</height>
+                <left>20</left>
+                <right>20</right>
+                <top>$PARAM[top]</top>
+                <align>center</align>
+                <aligny>center</aligny>
+                <font>reg25</font>
+                <label>$INFO[ListItem.Label]</label>
+                <visible>Container.Content()</visible>
             </control>
         </definition>
     </include>
@@ -1453,6 +1574,7 @@
                 <aligny>center</aligny>
                 <font>font12</font>
                 <label>[COLOR button_focus]$INFO[ListItem.Label][/COLOR]</label>
+                 <visible>!Container.Content()</visible>
 				<visible>Window.IsActive(music) + Control.HasFocus(640)</visible>
                 <scroll>true</scroll>
             </control>           
@@ -1466,9 +1588,21 @@
                 <font>reg25</font>
 		    	<label>[COLOR button_focus]$INFO[ListItem.Label][/COLOR]</label>
                 <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+ <visible>!Container.Content()</visible>
                 <visible>!Window.IsActive(music)</visible>                
                 <animation effect="slide" end="0,6" time="0" condition="Skin.HasSetting(cd) + Container.Content(albums) + !String.IsEmpty(ListItem.Art(discart))">conditional</animation>
 		    </control>
+            <control type="textbox">
+                <height>$PARAM[height]</height>
+                <left>20</left>
+                <right>20</right>
+                <top>$PARAM[top]</top>
+                <align>center</align>
+                <aligny>center</aligny>
+                <font>reg25</font>
+                <label>$INFO[ListItem.Label]</label>
+                <visible>Container.Content()</visible>
+            </control>
         </definition>
     </include> 
     <include name="filesterfolders">
@@ -1510,7 +1644,7 @@
                 <param name="texture" value="box3" />
             </include>   
             <control type="group">   
-                <visible>!Window.IsActive(addonbrowser)</visible> 
+                <visible>!Window.IsActive(addonbrowser)</visible>  
                 <control type="image">
                     <bordersize>10</bordersize>
                     <texture diffuse="diffuse/card.png" fallback="$INFO[ListItem.Art(icon)]">$INFO[ListItem.Art(fanart)]</texture>
@@ -1573,10 +1707,10 @@
                 <height>10%</height>
 		    	<left>22</left>
 		    	<right>22</right>
-                <bottom>14</bottom>
+                <bottom>17</bottom>
 		    	<align>center</align>
 		    	<aligny>center</aligny>
-                <font>reg21</font>
+                <font>reg20</font>
                 <shadowcolor>text_shadow</shadowcolor>
 		    	<label>[COLOR button_focus]$INFO[ListItem.Label][/COLOR]</label>
                 <scroll>true</scroll>
@@ -1589,7 +1723,7 @@
         <param name="aspect">scale</param>
 		<definition>
             <control type="group">   
-                <visible>!Window.IsActive(addonbrowser)</visible>         
+                <visible>!Window.IsActive(addonbrowser)</visible>       
                 <control type="image">
                     <bordersize>5</bordersize>
                     <texture fallback="$INFO[ListItem.Art(icon)]">$INFO[ListItem.Art(fanart)]</texture>

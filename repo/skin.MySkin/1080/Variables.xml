@@ -318,6 +318,11 @@
 		<value condition="String.IsEqual(ListItem.DBType,tvshow) | String.IsEqual(ListItem.DBType,season) | String.IsEqual(ListItem.DBType,set)">$LOCALIZE[1024]</value>
 		<value>$LOCALIZE[208]</value>
 	</variable>
+	<variable name="VideoInfoPlayButtonIconVar">
+		<value condition="String.IsEqual(ListItem.DBType,tvshow) | String.IsEqual(ListItem.DBType,season) | String.IsEqual(ListItem.DBType,set)">osd/bingie/folder.png</value>
+		<value>osd/bingie/play_fo.png</value>
+	</variable>
+
 	<variable name="VideoInfoSubLabelVar">
 		<value condition="String.IsEqual(ListItem.DBType,episode)">$INFO[ListItem.Season]$INFO[ListItem.Episode,[COLOR grey]x[/COLOR],: ]$INFO[ListItem.Title]</value>
 		<value condition="String.IsEqual(ListItem.DBType,season)">$INFO[ListItem.Label]</value>
@@ -1066,6 +1071,10 @@
 		<value condition="String.IsEqual(Skin.String(grid_layout),4)">4x4</value>
 		<value condition="String.IsEqual(Skin.String(grid_layout),6)">6x3</value>
 	</variable>
+	<variable name="50/50_layout">
+		<value condition="String.IsEqual(Skin.String(50/50_layout),1)">Images</value>
+		<value condition="String.IsEqual(Skin.String(50/50_layout),2)">Text</value>
+	</variable>
 	<variable name="osd_clearlogo">
 		<value condition="String.IsEqual(Skin.String(osd_clearlogo),1)">Disabled</value>
 		<value condition="String.IsEqual(Skin.String(osd_clearlogo),2)">Clearlogo</value>
@@ -1116,7 +1125,32 @@
 		<value condition="!String.IsEmpty(ListItem.TVShowTitle)">$INFO[ListItem.TVShowTitle]$INFO[ListItem.Year, (,), ]$INFO[ListItem.Season, ∙ S,] $INFO[ListItem.Episode,E, ∙ ]$INFO[ListItem.Title]</value>
 		<value condition="!String.IsEmpty(ListItem.Title)">$INFO[ListItem.Title]$INFO[ListItem.Year, (,), ]</value>
 	</variable>
-
+	<variable name="StarRatingAndVotesVar">
+		<value condition="String.IsEmpty(ListItem.RatingAndVotes)">flags/starrating/0.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,9)">flags/starrating/10.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,8)">flags/starrating/9.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,7)">flags/starrating/8.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,6)">flags/starrating/7.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,5)">flags/starrating/6.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,4)">flags/starrating/5.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,3)">flags/starrating/4.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,2)">flags/starrating/3.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,1)">flags/starrating/2.png</value>
+	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,0)">flags/starrating/1.png</value>
+	</variable>
+	<variable name="StarRatingVar">
+		<value condition="String.IsEmpty(ListItem.UserRating)">flags/starrating/0.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,9)">flags/starrating/10.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,8)">flags/starrating/9.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,7)">flags/starrating/8.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,6)">flags/starrating/7.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,5)">flags/starrating/6.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,4)">flags/starrating/5.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,3)">flags/starrating/4.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,2)">flags/starrating/3.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,1)">flags/starrating/2.png</value>
+	    <value condition="Integer.IsGreater(ListItem.UserRating,0)">flags/starrating/1.png</value>
+	</variable>
 	<expression name="IsSettingsOrMediaWindow">Player.HasVideo + [Window.IsActive(videos) | Window.IsActive(appearancesettings) | Window.IsActive(playersettings) | Window.IsActive(servicesettings) | Window.IsActive(pvrsettings) | Window.IsActive(mediasettings) | Window.IsActive(systemsettings) | Window.IsActive(addonbrowser) | Window.IsActive(music) | Window.IsActive(pictures) | Window.IsActive(programs)]</expression>
 
 

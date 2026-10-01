@@ -526,34 +526,8 @@
 		</definition>
 	</include>
 
-
 	
-	<variable name="StarRatingAndVotesVar">
-		<value condition="String.IsEmpty(ListItem.RatingAndVotes)">flags/starrating/0.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,9)">flags/starrating/10.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,8)">flags/starrating/9.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,7)">flags/starrating/8.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,6)">flags/starrating/7.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,5)">flags/starrating/6.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,4)">flags/starrating/5.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,3)">flags/starrating/4.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,2)">flags/starrating/3.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,1)">flags/starrating/2.png</value>
-	    <value condition="Integer.IsGreater(ListItem.RatingAndVotes,0)">flags/starrating/1.png</value>
-	</variable>
-	<variable name="StarRatingVar">
-		<value condition="String.IsEmpty(ListItem.UserRating)">flags/starrating/0.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,9)">flags/starrating/10.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,8)">flags/starrating/9.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,7)">flags/starrating/8.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,6)">flags/starrating/7.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,5)">flags/starrating/6.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,4)">flags/starrating/5.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,3)">flags/starrating/4.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,2)">flags/starrating/3.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,1)">flags/starrating/2.png</value>
-	    <value condition="Integer.IsGreater(ListItem.UserRating,0)">flags/starrating/1.png</value>
-	</variable>
+
 	<variable name="FocusedButtonLabel">
 	    <value condition="Control.HasFocus(7)">Rate</value>
 	    <value condition="Control.HasFocus(8)">$LOCALIZE[208]</value>
