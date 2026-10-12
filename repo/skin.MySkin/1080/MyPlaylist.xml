@@ -5,14 +5,9 @@
 	<views>50</views>
 	<controls>
 		<include>DefaultBG</include>
-			<control type="list" id="50">
-                <animation effect="slide" end="279,212" time="0" condition="String.IsEqual(Skin.String(musicosd),2) + Integer.IsEqual(Container(50).NumItems,10)">conditional</animation>
-                <animation effect="slide" end="279,60" time="0" condition="String.IsEqual(Skin.String(musicosd),2) + !Integer.IsEqual(Container(50).NumItems,10)">conditional</animation>
-		        <include>Music_List</include>
-            </control>
+
 		<control type="group">
             <visible>String.IsEqual(Skin.String(musicosd),1)</visible>
-
             <control type="group" id="200">
                 <include>DA</include>
                 <include content="bg">
@@ -409,52 +404,44 @@
                     <autoscroll delay="2000" time="2000" repeat="500">true</autoscroll>
                 </control>
             </control>
-			<include>MediaMenuMouseOverlay</include>
-			<control type="group">
-				<include>MediaMenuCommon</include>
-				<control type="grouplist" id="9000">
-					<top>150</top>
-					<left>23</left>
-					<right>10</right>
-					<itemgap>10</itemgap>
-					<include>MediaMenuListCommon</include>
-					<control type="label" id="203">
-						<description>Actions</description>
-						<include>MediaMenuLabelCommon</include>
-						<label>$LOCALIZE[31020]</label>
-					</control>
-					<control type="radiobutton" id="20">
+             </control>
+            <control type="group">
+                <visible>String.IsEqual(Skin.String(musicosd),2)</visible>
+                <include>SongsLayout</include>
+            </control>
+            <include>MediaMenuMouseOverlay</include>
+            <control type="group">
+                <include>MediaMenuCommon</include>
+                <control type="grouplist" id="9000">
+                    <top>150</top>
+                    <left>23</left>
+                    <right>10</right>
+                    <itemgap>10</itemgap>
+                    <include>MediaMenuListCommon</include>
+                    <control type="label" id="203">
+                        <description>Actions</description>
+                        <include>MediaMenuLabelCommon</include>
+                        <label>$LOCALIZE[31020]</label>
+                    </control>
+                    <control type="radiobutton" id="20">
                         <include>MediaMenuItemsCommon</include>
-						<label>$LOCALIZE[191]</label>
-					</control>
-					<control type="button" id="26">
-						<label></label>
+                        <label>$LOCALIZE[191]</label>
+                    </control>
+                    <control type="button" id="26">
+                        <label></label>
                         <include>MediaMenuItemsCommon</include>
-					</control>
-					<control type="button" id="21">
-						<label>$LOCALIZE[190]</label>
+                    </control>
+                    <control type="button" id="21">
+                        <label>$LOCALIZE[190]</label>
                         <include>MediaMenuItemsCommon</include>
-					</control>
-					<control type="button" id="22">
-						<label>$LOCALIZE[192]</label>
+                    </control>
+                    <control type="button" id="22">
+                        <label>$LOCALIZE[192]</label>
                         <include>MediaMenuItemsCommon</include>
-					</control>
+                    </control>
                     <include>MediaMenuNowPlaying</include>
-				</control>
-			</control>
-		</control>
-		<control type="group">
-            <visible>String.IsEqual(Skin.String(musicosd),2)</visible>
-                <control type="label">
-                    <right>110</right>
-                    <bottom>15</bottom>
-                    <width>100%</width>
-                    <height>40</height>
-                    <align>right</align>
-                    <label>$INFO[Container.CurrentItem,,/][COLOR button_focus]$INFO[Container.NumItems][/COLOR]</label>
-                    <shadowcolor>black</shadowcolor>
-                    <autoscroll delay="2000" time="2000" repeat="500">true</autoscroll>
                 </control>
-        </control>
+            </control>
+            <!-- <include>Content</include> -->
 	</controls>
 </window>

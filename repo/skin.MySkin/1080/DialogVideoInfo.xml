@@ -77,34 +77,6 @@
             		<visible>!String.IsEmpty(ListItem.Studio)</visible>
 				</control>	
 			</control>			
-		<!--Video Icon ?-->
-			<control type="group">
-				<centertop>50%</centertop>
-				<height>1080</height>
-				<centerleft>50%</centerleft>
-				<width>1920</width>
-				<animation effect="fade" start="100" end="0" time="200" tween="sine" condition="Window.IsVisible(script-embuary-video.xml) | Window.IsVisible(script-embuary-person.xml) | Window.IsVisible(script-embuary-image.xml)">conditional</animation>
-				<control type="group">
-					<bottom>18</bottom>
-					<left>70</left>
-					<visible>String.IsEqual(ListItem.DBType,musicvideo) + !Skin.HasSetting(show_musicvideoposter)</visible>
-					<control type="image">
-						<width>290</width>
-						<height>395</height>
-						<aspectratio>stretch</aspectratio>
-						<texture colordiffuse="FF555555">DefaultVideo.png</texture>
-					</control>
-					<control type="image">
-						<left>10</left>
-						<width>290</width>
-						<height>395</height>
-						<aspectratio>keep</aspectratio>
-						<texture>$INFO[ListItem.Thumb]</texture>
-						<bordertexture border="21" infill="false">overlays/shadow.png</bordertexture>
-						<bordersize>20</bordersize>
-					</control>
-				</control>
-			</control>
 		</control>
 		<!--Info/Plot-->		
 			<control type="group">	
@@ -350,7 +322,7 @@
 				<height>354</height>
 				<bottom>4</bottom>
 				<left>240</left>
-				<width>1672</width>
+				<width>1677</width>
 				<ondown condition="System.AddonIsEnabled(script.embuary.info) + Control.HasFocus(50) + !String.IsEqual(ListItem.DBType,set)">RunScript(script.embuary.info,call=person,query='$ESCINFO[Container(50).ListItem.Label]')</ondown>
 				<ondown condition="System.HasAddon(script.embuary.info) + !System.AddonIsEnabled(script.embuary.info) + !String.IsEqual(ListItem.DBType,set)">EnableAddon(script.embuary.info)</ondown>
 				<ondown condition="!System.HasAddon(script.embuary.info) + !String.IsEqual(ListItem.DBType,set)">InstallAddon(script.embuary.info)</ondown>

@@ -115,6 +115,12 @@
         <width>1263</width>
         <height>1061</height>
     </include>
+    <include name="realfullpanelright">
+        <right>0</right>
+        <top>0</top>
+        <width>1280</width>
+        <height>1080</height>
+    </include>
     <include name="fullpanelleft">
         <left>9</left>
         <top>9</top>

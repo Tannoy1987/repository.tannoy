@@ -30,7 +30,7 @@
 			<visible>![ControlGroup(20000).HasFocus() | ControlGroup(50000).HasFocus() | ControlGroup(2000).HasFocus()]</visible>
 		</control>
 		<control type="group">
-			<visible>Window.IsActive(videos) + ![Container.Content() | Container.Content(files) | Container.Content(videos) | Control.HasFocus(840) | ControlGroup(9000).HasFocus]</visible>
+			<visible>[Window.IsActive(videos) + !Container.Content()] | Window.IsActive(music)</visible>
 			<control type="image">
 				<bordersize>-4</bordersize>
 				<texture diffuse="diffuse/sb.png">$VAR[FanartImageVar]</texture>

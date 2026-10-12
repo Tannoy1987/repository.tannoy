@@ -17,7 +17,6 @@
 	<controls>
 		<include>HomeLoad</include>
 		<include>DefaultBGNSB</include>
-
 		<control type="group" id="100">
 			<include>DA</include>			
 			<control type="group" id="101">

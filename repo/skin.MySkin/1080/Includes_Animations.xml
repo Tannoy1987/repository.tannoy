@@ -51,6 +51,19 @@
 		<animation effect="slide" end="0,40" time="0" condition="Integer.IsEqual(Container(41).NumItems,4)">conditional</animation>
 		<animation effect="slide" end="0,20" time="0" condition="Integer.IsEqual(Container(41).NumItems,5)">conditional</animation>
 	</include>
+	<include name="SGLSlide">
+		<animation effect="slide" end="0,270" time="0" condition="Integer.IsLess(Container(660).NumItems,8)">conditional</animation>
+		<animation effect="slide" end="0,395" time="0" condition="Integer.IsLess(Container(660).NumItems,15)">conditional</animation>
+
+		<animation effect="slide" end="708,0" time="0" condition="Integer.IsEqual(Container(660).NumItems,1)">conditional</animation>
+		
+		<animation effect="slide" end="593,0" time="0" condition="Integer.IsEqual(Container(660).NumItems,2)">conditional</animation>
+		<animation effect="slide" end="477,0" time="0" condition="Integer.IsEqual(Container(660).NumItems,3)">conditional</animation>
+		<animation effect="slide" end="361,0" time="0" condition="Integer.IsEqual(Container(660).NumItems,4)">conditional</animation>
+		<animation effect="slide" end="245,0" time="0" condition="Integer.IsEqual(Container(660).NumItems,5)">conditional</animation>
+		<animation effect="slide" end="129,0" time="0" condition="Integer.IsEqual(Container(660).NumItems,6)">conditional</animation>
+		<animation effect="slide" end="13,0" time="0" condition="Integer.IsEqual(Container(660).NumItems,7)">conditional</animation>
+	</include>
 
 
 

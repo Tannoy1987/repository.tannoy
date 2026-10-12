@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window>
-	<defaultcontrol>640</defaultcontrol>
+	<defaultcontrol>50</defaultcontrol>
 	<menucontrol>9000</menucontrol>
-	<views>640,50</views>
+	<views>640,660,50</views>
 	<controls>
 		<include>DefaultBG</include>	
 		<include>GridLayout</include>	
+			<include>SmallGridLayout</include>  
+			<include>SongsLayout</include> 
 		<control type="group">
+<visible>!true</visible>			
 			<include>R 1/3 Panel</include>
-			<visible>!Control.IsVisible(640)</visible>
+			<visible>![Control.IsVisible(640) | Control.IsVisible(660)]</visible>
 			<include>bg</include>
 			<visible>Container.Content()</visible>
 			<control type="image">
@@ -17,65 +20,7 @@
 			</control>
 		</control>
 		<control type="group">
-    		<control type="list" id="50">    
-    	        <width>1270</width>
-                <left>8</left>
-                <top>8</top>
-                <bottom>8</bottom>
-    	        <scrolltime tween="cubic" easing="out">500</scrolltime>
-    	        <orientation>vertical</orientation>
-    	        <pagecontrol>531</pagecontrol>
-    	        <movement>6</movement>
-    	        <focusposition>2</focusposition>
-    	        <onleft>9000</onleft>
-				<onright>531</onright>
-    	        <onup>50</onup>
-    	        <ondown>50</ondown>
-				<focusedlayout height="89">
-					<include>focusbox</include>
-					<control type="textbox">
-						<height>89</height>
-						<left>60</left>
-						<right>60</right>
-						<align>center</align>
-						<aligny>center</aligny>
-						<label>$INFO[ListItem.Label]</label>
-						<textcolor>black</textcolor>
-					</control>
-					<control type="image">
-						<left>15</left>
-						<top>30</top>
-						<width>32</width>
-						<height>32</height>
-					    <texture colordiffuse="black">overlays/watched/OverlayPlaying-List.png</texture>
-						<visible>ListItem.IsPlaying</visible>
-			    	</control> 
-				</focusedlayout>
-				<itemlayout height="75">
-					<control type="image">
-						<bordersize>5</bordersize>
-						<texture colordiffuse="button_focus" border="16">boxes/tdbox.png</texture>
-					</control>
-					<control type="label">
-						<height>75</height>
-						<bottom>0</bottom>
-						<left>60</left>
-						<right>60</right>
-						<align>center</align>
-						<aligny>center</aligny>
-						<label>$INFO[ListItem.Label]</label>
-						<shadowcolor>text_shadow</shadowcolor>
-					</control>
-					<control type="image">
-						<left>15</left>
-						<top>23</top>
-						<width>32</width>
-						<height>32</height>
-					    <texture colordiffuse="button_focus">overlays/watched/OverlayPlaying-List.png</texture>
-						<visible>ListItem.IsPlaying</visible>
-					</control>				
-				</itemlayout>
-			 </control>
+<visible>!true</visible>
 			<control type="group">
 				<control type="group">
 					<include>R 1/3 Panel</include>
@@ -219,6 +164,8 @@
 					</control>	
 				</control>
 			</control>
+		
+		</control>
 			<include>MediaMenuMouseOverlay</include>
 			<control type="group">
 				<include>MediaMenuCommon</include>
@@ -279,10 +226,10 @@
 					<include>MediaMenuNowPlaying</include>
 				</control>
 			</control>
-		</control>
 		<include>crt</include>
 		<include>touch</include> 
-	<!--<include>Folderpath</include>
-		<include>Content</include>-->
+	<!--<include>Folderpath</include>-->
+	<!--<include>Content</include>
+		 <include>Lineoverlay</include> -->	
 	</controls>
 </window>

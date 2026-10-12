@@ -2,8 +2,7 @@
 <includes> 
     <include name="MainLayout">   
         <control type="group">
-            <visible>[Control.IsVisible(51) | Control.IsVisible(52) | Control.IsVisible(53)] + [Container.Content(movies) | Container.Content(tvshows) | Container.Content(seasons) | Container.Content(episodes)]</visible> 
-            <visible>![Control.IsVisible(50) | Control.IsVisible(55)]</visible> 
+            <visible>Control.IsVisible(51) | Control.IsVisible(52) | Control.IsVisible(53)</visible> 
             <include>touch</include>    
             <control type="group">
                 <include content="MediaFlagsTR">
@@ -549,402 +548,130 @@
                         </control>
                     </focusedlayout>
                 </control>
-                <control type="panel" id="54">
-                    <bottom>4</bottom>
-                    <height>804</height>
-                    <onleft>9000</onleft>
-                    <onright condition="Integer.IsGreater(Container(53).NumItems,14)">531</onright>
-                    <onright condition="!Integer.IsGreater(Container(53).NumItems,14)">51</onright>
-                    <onback>ClearProperty(ListAnimation,home)</onback>
-                    <viewtype label="Dynamic Panel">Panel</viewtype>
-                    <visible>Container.Content(movies) | Container.Content(tvshows) | Container.Content(seasons)</visible>
-                    <orientation>horizontal</orientation>
-                    <preloaditems>4</preloaditems>
-                    <scrolltime tween="sine">150</scrolltime>
-                    <pagecontrol>531</pagecontrol>
-                    <itemlayout width="360" height="804" condition="!Container.Content(episodes) + Integer.IsEqual(Container(54).NumItems,1)">
-                        <include content="box">
-                            <param name="texture" value="box2" />
-                            <param name="bs" value="4" />
-                        </include>                            
-                        <control type="image">
-                            <bordersize>8</bordersize>
-                            <texture diffuse="diffuse/poster.png" fallback="$INFO[ListItem.Art(poster)]">$INFO[ListItem.Art(poster)]</texture>
-                        </control>
-                        <control type="image">
-		                	<right>8</right>
-		                	<bottom>8</bottom>
-		                	<width>48</width>
-		                	<height>48</height>
-		                	<texture>overlays/cornershadow.png</texture>
-						<visible>Integer.IsGreater(ListItem.PlayCount,0) + !ListItem.IsResumable</visible>
-		                </control> 
-                        <control type="image">
-		                	<right>13</right>
-		                	<top>167</top>
-		                	<width>18</width>
-		                	<height>18</height>
-		                	<texture>$VAR[ItemStatusIconVar]</texture>
-		                </control>                        
-                        <control type="textbox">
-                            <left>20</left>
-                            <right>20</right>
-                            <bottom>5</bottom>
-                            <height>50</height>
-                            <align>center</align>
-                            <aligny>center</aligny>
-                            <font>font1</font>
-                            <label>$INFO[ListItem.Label]</label>
-                            <visible>![String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)]</visible>
-                        </control>
-                        <control type="progress">
-                            <description>progress bar</description>
-                            <top>175</top>
-                            <left>7</left>
-                            <right>7</right>
-                            <height>6</height>
-                            <texturebg />
-                            <info>ListItem.PercentPlayed</info>
-                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
-                        </control>                                                 
-                    </itemlayout>
-                    <focusedlayout width="360" height="804" condition="!Container.Content(episodes) + Integer.IsEqual(Container(54).NumItems,1)">
-                        <include content="box">
-                            <param name="texture" value="box3" />
-                            <param name="bs" value="4" />
-                        </include>
-                        <control type="image">
-                            <bordersize>12</bordersize>
-                            <texture diffuse="diffuse/poster.png" fallback="$INFO[ListItem.Art(poster)]">$INFO[ListItem.Art(poster)]</texture>
-                        </control>
-                        <control type="image">
-		                	<right>12</right>
-		                	<bottom>12</bottom>
-		                	<width>40</width>
-		                	<height>40</height>
-		                	<texture>overlays/cornershadow.png</texture>
-							<visible>Integer.IsGreater(ListItem.PlayCount,0) + !ListItem.IsResumable</visible>     
-		                </control> 
-                        <control type="image">
-		                	<right>15</right>
-		                	<top>163</top>
-		                	<width>18</width>
-		                	<height>18</height>
-		    	        	<texture>$VAR[ItemStatusIconVar]</texture>
-		    	        </control>  
-                        <control type="progress">
-                            <description>progress bar</description>
-                            <top>171</top>
-                            <left>11</left>
-                            <right>11</right>
-                            <height>6</height>
-                            <texturebg />
-                            <info>ListItem.PercentPlayed</info>
-                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
-                        </control> 
-                        <control type="textbox">
-                            <left>15</left>
-                            <right>15</right>
-                            <bottom>7</bottom>
-                            <height>50</height>            
-                            <align>center</align>
-                            <aligny>center</aligny>
-                            <font>font1</font>
-                            <label>$INFO[ListItem.Label]</label>
-                            <visible>![String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)]</visible>
-                        </control>
-                    </focusedlayout>
-                    <itemlayout width="544" height="804" condition="!Container.Content(episodes) + Integer.IsEqual(Container(54).NumItems,3)">
-                        <include content="box">
-                            <param name="texture" value="box2" />
-                            <param name="bs" value="4" />
-                        </include>                            
-                        <control type="image">
-                            <bordersize>8</bordersize>
-                            <texture diffuse="diffuse/poster.png" fallback="$INFO[ListItem.Art(poster)]">$INFO[ListItem.Art(poster)]</texture>
-                        </control>
-                        <control type="image">
-		                	<right>8</right>
-		                	<bottom>8</bottom>
-		                	<width>48</width>
-		                	<height>48</height>
-		                	<texture>overlays/cornershadow.png</texture>
-						<visible>Integer.IsGreater(ListItem.PlayCount,0) + !ListItem.IsResumable</visible>
-		                </control> 
-                        <control type="image">
-		                	<right>13</right>
-		                	<top>167</top>
-		                	<width>18</width>
-		                	<height>18</height>
-		                	<texture>$VAR[ItemStatusIconVar]</texture>
-		                </control>                        
-                        <control type="textbox">
-                            <left>20</left>
-                            <right>20</right>
-                            <bottom>5</bottom>
-                            <height>50</height>
-                            <align>center</align>
-                            <aligny>center</aligny>
-                            <font>font1</font>
-                            <label>$INFO[ListItem.Label]</label>
-                            <visible>![String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)]</visible>
-                        </control>
-                        <control type="progress">
-                            <description>progress bar</description>
-                            <top>175</top>
-                            <left>7</left>
-                            <right>7</right>
-                            <height>6</height>
-                            <texturebg />
-                            <info>ListItem.PercentPlayed</info>
-                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
-                        </control>                                                 
-                    </itemlayout>
-                    <focusedlayout width="544" height="804" condition="!Container.Content(episodes) + Integer.IsEqual(Container(54).NumItems,3)">
-                        <include content="box">
-                            <param name="texture" value="box3" />
-                            <param name="bs" value="4" />
-                        </include>
-                        <control type="image">
-                            <bordersize>12</bordersize>
-                            <texture diffuse="diffuse/poster.png" fallback="$INFO[ListItem.Art(poster)]">$INFO[ListItem.Art(poster)]</texture>
-                        </control>
-                        <control type="image">
-		                	<right>12</right>
-		                	<bottom>12</bottom>
-		                	<width>40</width>
-		                	<height>40</height>
-		                	<texture>overlays/cornershadow.png</texture>
-							<visible>Integer.IsGreater(ListItem.PlayCount,0) + !ListItem.IsResumable</visible>     
-		                </control> 
-                        <control type="image">
-		                	<right>15</right>
-		                	<top>163</top>
-		                	<width>18</width>
-		                	<height>18</height>
-		    	        	<texture>$VAR[ItemStatusIconVar]</texture>
-		    	        </control>  
-                        <control type="progress">
-                            <description>progress bar</description>
-                            <top>171</top>
-                            <left>11</left>
-                            <right>11</right>
-                            <height>6</height>
-                            <texturebg />
-                            <info>ListItem.PercentPlayed</info>
-                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
-                        </control> 
-                        <control type="textbox">
-                            <left>15</left>
-                            <right>15</right>
-                            <bottom>7</bottom>
-                            <height>50</height>            
-                            <align>center</align>
-                            <aligny>center</aligny>
-                            <font>font1</font>
-                            <label>$INFO[ListItem.Label]</label>
-                            <visible>![String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)]</visible>
-                        </control>
-                    </focusedlayout>
-
-                    <itemlayout width="272" height="400" condition="!Container.Content(episodes)">
-                        <include content="box">
-                            <param name="texture" value="box2" />
-                            <param name="bs" value="4" />
-                        </include>                            
-                        <control type="image">
-                            <bordersize>8</bordersize>
-                            <texture diffuse="diffuse/poster.png" fallback="$INFO[ListItem.Art(poster)]">$INFO[ListItem.Art(poster)]</texture>
-                        </control>
-                        <control type="image">
-		                	<right>3%</right>
-		                	<bottom>2%"</bottom>
-		                	<width>20%</width>
-		                	<height>13%</height>
-		                	<texture>overlays/cornershadow.png</texture>
-						<visible>Integer.IsGreater(ListItem.PlayCount,0) + !ListItem.IsResumable</visible>
-		                </control> 
-                        <control type="image">
-		                	<right>5%</right>
-		                	<top>91%</top>
-		                	<width>9%</width>
-		                	<height>6%</height>
-		                	<texture>$VAR[ItemStatusIconVar]</texture>
-		                </control>                        
-                        <control type="textbox">
-                            <left>10%</left>
-                            <right>10%</right>
-                            <bottom>1%</bottom>
-                            <height>25%</height>
-                            <align>center</align>
-                            <aligny>center</aligny>
-                            <font>font11</font>
-                            <label>$INFO[ListItem.Label]</label>
-                            <visible>![String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)]</visible>
-                        </control>  
-                        <control type="progress">
-                            <description>progress bar</description>
-                            <top>93%</top>
-                            <left>4%</left>
-                            <right>4%</right>
-                            <texturebg />
-                            <info>ListItem.PercentPlayed</info>
-                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
-                        </control>                                                 
-                    </itemlayout>
-                    <focusedlayout width="272" height="400" condition="!Container.Content(episodes)">
-                        <include content="box">
-                            <param name="texture" value="box3" />
-                            <param name="bs" value="4" />
-                        </include>
-                        <control type="image">
-                            <bordersize>12</bordersize>
-                            <texture diffuse="diffuse/poster.png" fallback="$INFO[ListItem.Art(poster)]">$INFO[ListItem.Art(poster)]</texture>
-                        </control>
-                        <control type="image">
-		                	<right>4.5%</right>
-		                	<bottom>3%"</bottom>
-		                	<width>20%</width>
-		                	<height>13%</height>
-		                    <texture>overlays/cornershadow.png</texture>
-					    	<visible>Integer.IsGreater(ListItem.PlayCount,0) + !ListItem.IsResumable</visible>     
-		                </control> 
-                        <control type="image">
-		                	<right>6.7%</right>
-		                	<top>89.4%</top>
-		                	<width>9%</width>
-		                	<height>6%</height>
-		    	        	<texture>$VAR[ItemStatusIconVar]</texture>
-		    	        </control>  
-                        <control type="progress">
-                            <description>progress bar</description>
-                            <top>91.6%</top>
-                            <left>6%</left>
-                            <right>6%</right>
-                            <texturebg />
-                            <info>ListItem.PercentPlayed</info>
-                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
-                        </control> 
-                        <control type="textbox">
-                            <left>10%</left>
-                            <right>10%</right>
-                            <bottom>2%</bottom>
-                            <height>24%</height>        
-                            <align>center</align>
-                            <aligny>center</aligny>
-                            <font>font11</font>
-                            <label>$INFO[ListItem.Label]</label>
-                            <visible>![String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)]</visible>
-                        </control>
-                    </focusedlayout>
-                    
-                    <itemlayout width="136" height="200" condition="!Container.Content(episodes)">
-                        <include content="box">
-                            <param name="texture" value="box2" />
-                            <param name="bs" value="4" />
-                        </include>                            
-                        <control type="image">
-                            <bordersize>8</bordersize>
-                            <texture diffuse="diffuse/poster.png" fallback="$INFO[ListItem.Art(poster)]">$INFO[ListItem.Art(poster)]</texture>
-                        </control>
-                        <control type="image">
-		                	<right>8</right>
-		                	<bottom>8</bottom>
-		                	<width>48</width>
-		                	<height>48</height>
-		                	<texture>overlays/cornershadow.png</texture>
-						<visible>Integer.IsGreater(ListItem.PlayCount,0) + !ListItem.IsResumable</visible>
-		                </control> 
-                        <control type="image">
-		                	<right>13</right>
-		                	<top>167</top>
-		                	<width>18</width>
-		                	<height>18</height>
-		                	<texture>$VAR[ItemStatusIconVar]</texture>
-		                </control>                        
-                        <control type="textbox">
-                            <left>20</left>
-                            <right>20</right>
-                            <bottom>5</bottom>
-                            <height>50</height>
-                            <align>center</align>
-                            <aligny>center</aligny>
-                            <font>font1</font>
-                            <label>$INFO[ListItem.Label]</label>
-                            <visible>![String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)]</visible>
-                        </control>
-                        <control type="progress">
-                            <description>progress bar</description>
-                            <top>175</top>
-                            <left>7</left>
-                            <right>7</right>
-                            <height>6</height>
-                            <texturebg />
-                            <info>ListItem.PercentPlayed</info>
-                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
-                        </control>                                                 
-                    </itemlayout>
-                    <focusedlayout width="136" height="200" condition="!Container.Content(episodes)">
-                        <include content="box">
-                            <param name="texture" value="box3" />
-                            <param name="bs" value="4" />
-                        </include>
-                        <control type="image">
-                            <bordersize>12</bordersize>
-                            <texture diffuse="diffuse/poster.png" fallback="$INFO[ListItem.Art(poster)]">$INFO[ListItem.Art(poster)]</texture>
-                        </control>
-                        <control type="image">
-		                	<right>12</right>
-		                	<bottom>12</bottom>
-		                	<width>40</width>
-		                	<height>40</height>
-		                	<texture>overlays/cornershadow.png</texture>
-							<visible>Integer.IsGreater(ListItem.PlayCount,0) + !ListItem.IsResumable</visible>     
-		                </control> 
-                        <control type="image">
-		                	<right>15</right>
-		                	<top>163</top>
-		                	<width>18</width>
-		                	<height>18</height>
-		    	        	<texture>$VAR[ItemStatusIconVar]</texture>
-		    	        </control>  
-                        <control type="progress">
-                            <description>progress bar</description>
-                            <top>171</top>
-                            <left>11</left>
-                            <right>11</right>
-                            <height>6</height>
-                            <texturebg />
-                            <info>ListItem.PercentPlayed</info>
-                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
-                        </control> 
-                        <control type="textbox">
-                            <left>15</left>
-                            <right>15</right>
-                            <bottom>7</bottom>
-                            <height>50</height>            
-                            <align>center</align>
-                            <aligny>center</aligny>
-                            <font>font1</font>
-                            <label>$INFO[ListItem.Label]</label>
-                            <visible>![String.IsEqual(ListItem.DBTYPE,episode) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,tvshow) | String.IsEqual(ListItem.DBTYPE,season)]</visible>
-                        </control>
-                    </focusedlayout>
-                </control>
             </control> 
         </control>
+    </include>
+    <include name="SmallGridLayout">   
+        <param name="height">270</param>
+        <param name="width">232</param>
+        <definition>
+
+            <control type="panel" id="660">
+                <top>135</top>
+                <left>135</left>
+                <width>1650</width>
+                <height>810</height>
+                <onleft>9000</onleft>
+                <onright>531</onright>
+       
+                <onback>ClearProperty(ListAnimation,home)</onback>
+                <viewtype label="SmallGrid (660)">Panel</viewtype>
+                <visible>![Container.Content(songs) | Container.Content(movies) | Container.Content(tvshows) | Container.Content(seasons) | Container.Content(episodes)]</visible>
+                <orientation>vertical</orientation>
+                <preloaditems>4</preloaditems>
+                <scrolltime tween="sine">150</scrolltime>
+                <pagecontrol>531</pagecontrol>
+
+                <itemlayout width="$PARAM[width]" height="$PARAM[height]" condition="![Container.Content(artists) | Container.Content(albums)]">
+                    <control type="image">
+                        <bordersize>10</bordersize>
+                        <texture colordiffuse="button_focus" border="16">boxes/tdbox.png</texture>
+                    </control>
+                    <include content="panellayout">
+                        <param name="top" value="190" />
+                        <param name="height" value="70" />
+                        <param name="bs" value="20,20,20,80" />
+                    </include>
+                    <include>filesterfolders</include>
+                    <control type="progress">
+                        <bottom>17</bottom>
+                        <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
+                        <left>5</left>
+                        <description>progress bar</description>
+                        <right>5</right>
+                        <height>6</height>
+                        <texturebg />
+                        <info>ListItem.PercentPlayed</info>
+                    </control>                 
+                </itemlayout>
+                <focusedlayout width="$PARAM[width]" height="$PARAM[height]" condition="![Container.Content(artists) | Container.Content(albums)]">
+                    <control type="group">
+                        <include content="box">
+                            <param name="texture" value="box3" />
+                        </include>
+                        <include content="panelfocuslayout">
+                            <param name="top" value="183" />    
+                            <param name="height" value="81" />                                                                                     
+                            <param name="bs" value="22,22,22,82" />
+                
+                        </include>
+                        <include content="filesterfolders">
+                            <param name="top" value="5" />
+                            <param name="left" value="14" />
+                            <param name="tc" value="button_focus" />
+                            <param name="ft" value="6" />
+                            <param name="fl" value="7" />
+                            <param name="fcd" value="button_focus" />
+                        </include>
+                        <control type="progress">
+                            <visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
+                            <left>7</left>
+                            <right>7</right>
+                            <bottom>19</bottom>
+                            <description>progress bar</description>
+                            <height>6</height>
+                            <texturebg />
+                            <info>ListItem.PercentPlayed</info>
+                        </control>   
+                    </control>
+                </focusedlayout>                                         
+                <itemlayout width="$PARAM[width]" height="$PARAM[height]" condition="[Container.Content(artists) | Container.Content(albums)]">
+                    <control type="image">
+                        <bordersize>5</bordersize>
+                        <texture colordiffuse="button_focus" border="16">boxes/tdbox.png</texture>
+                    </control>
+                    <include content="panellayout">
+                        <param name="top" value="305" />
+                        <param name="height" value="46" />
+                        <param name="bs" value="5,5,5,45" />
+                    </include>               
+                </itemlayout>
+                <focusedlayout width="$PARAM[width]" height="$PARAM[height]" condition="[Container.Content(artists) | Container.Content(albums)]">
+                    <include content="box">
+                        <param name="texture" value="box3" />
+                        <param name="vis" value="!Skin.HasSetting(cd) | [Skin.HasSetting(cd) + [String.IsEmpty(ListItem.Art(discart)) | Container.Content(artists)]]" />
+                    </include>  
+                    <control type="group"> 
+                     <visible>Skin.HasSetting(cd)</visible>
+                     <control type="image">
+                         <bordersize>5</bordersize>
+                         <texture colordiffuse="button_focus" border="16">boxes/tdbox.png</texture>
+                    </control>
+					<control type="image">
+					 	<bordersize>5,5,5,43</bordersize>
+					 	<texture colordiffuse="button_focus">boxes/cd.png</texture>
+					 	<aspectratio>scaled</aspectratio>
+					 	<visible>Container.Content(albums) + !String.IsEmpty(ListItem.Art(discart))</visible>
+					</control>
+                    </control>
+                    <include content="panelfocuslayout">
+                        <param name="top" value="304" />    
+                        <param name="height" value="40" />                                                                                     
+                        <param name="bs" value="12,12,12,50" />
+                    </include>
+                </focusedlayout>                                           
+            </control>
+        </definition>
     </include>
     <include name="GridLayout">   
         <control type="group">
             <control type="panel" id="640">
                 <include>List 100</include>  
-                <onup>640</onup>
-                <ondown>640</ondown>
                 <onleft>9000</onleft>
                 <onright>531</onright>
                 <onback>ClearProperty(ListAnimation,home)</onback>
                 <viewtype label="Grid (640)">Panel</viewtype>
-                <visible>![Container.Content(movies) | Container.Content(tvshows) | Container.Content(seasons) | Container.Content(episodes)]</visible>
+                <visible>![Container.Content(songs) | Container.Content(movies) | Container.Content(tvshows) | Container.Content(seasons) | Container.Content(episodes)]</visible>
                 <orientation>vertical</orientation>
                 <preloaditems>4</preloaditems>
                 <scrolltime tween="sine">150</scrolltime>
@@ -1383,6 +1110,7 @@
         <param name="mftop">-314</param>
         <param name="mfwidth">40</param>
         <param name="mfleft">10</param>
+        <param name="font">reg25</param>
         <definition>
             <control type="image">
                 <top>$PARAM[btop]</top>
@@ -1439,15 +1167,14 @@
             </control>  
             <control type="label">
                 <bottom>-5</bottom>
-                <right>15</right>
-                <left>15</left>
+                <right>10</right>
+                <left>10</left>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>font12</font>
+                <font>Reg24</font>
                 <label>$INFO[ListItem.Label]</label>
                 <visible>!Container.Content()</visible> 
-				<visible>Window.IsActive(music) + Control.IsVisible(640)</visible>
-                <scroll>true</scroll>
+				<visible>Window.IsActive(music) + [Control.IsVisible(640) | Control.IsVisible(660)]</visible>
             </control>    
             <control type="textbox">
                 <height>$PARAM[height]</height>
@@ -1456,9 +1183,9 @@
                 <top>$PARAM[top]</top>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>reg25</font>
+                <font>$PARAM[font]</font>
                 <label>$INFO[ListItem.Label]</label>
- <visible>!Container.Content()</visible>
+                <visible>!Container.Content()</visible>
                 <visible>!Window.IsActive(music)</visible>
             </control>
             <control type="textbox">
@@ -1468,7 +1195,7 @@
                 <top>$PARAM[top]</top>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>reg25</font>
+                <font>$PARAM[font]</font>
                 <label>$INFO[ListItem.Label]</label>
                 <visible>Container.Content()</visible>
             </control>
@@ -1485,8 +1212,8 @@
         <param name="gheight">230</param>
         <param name="gleft">7</param>
         <param name="gtop">173</param>
-        <param name="btop">35</param>
-        <param name="bbottom">125</param>
+        <param name="btop">37</param>
+        <param name="bbottom">127</param>
         <param name="bleft">7</param>
         <param name="bright">7</param>
 		<definition>
@@ -1554,7 +1281,7 @@
                 <textcolor>button_focus</textcolor>
                 <label>$INFO[ListItem.Size]</label>
                 <visible>!Window.IsActive(music)</visible>
-				<visible>Integer.IsGreater(ListItem.Size,0) + Control.HasFocus(640)</visible>
+				<visible>Integer.IsGreater(ListItem.Size,0) + [Control.HasFocus(640) | Control.IsVisible(660)]</visible>
             </control>
             <control type="label">
                 <top>-10</top>
@@ -1564,18 +1291,18 @@
                 <font>font1</font>
                 <label>[COLOR button_focus]$INFO[ListItem.Duration][/COLOR]</label>
                 <visible>!Window.IsActive(music)</visible>
-				<visible>Control.HasFocus(640)</visible>
+				<visible>Control.HasFocus(640) | Control.IsVisible(660)</visible>
             </control>           
             <control type="label">
-                <bottom>0</bottom>
+                <bottom>-1</bottom>
                 <right>15</right>
                 <left>15</left>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>font12</font>
+                <font>Reg23</font>
                 <label>[COLOR button_focus]$INFO[ListItem.Label][/COLOR]</label>
-                 <visible>!Container.Content()</visible>
-				<visible>Window.IsActive(music) + Control.HasFocus(640)</visible>
+                <visible>!Container.Content()</visible>
+				<visible>Window.IsActive(music) + [Control.HasFocus(640) | Control.IsVisible(660)]</visible>
                 <scroll>true</scroll>
             </control>           
             <control type="textbox">
@@ -1585,10 +1312,10 @@
                 <top>$PARAM[top]</top>
 		    	<align>center</align>
 		    	<aligny>center</aligny>
-                <font>reg25</font>
+                <font>reg24</font>
 		    	<label>[COLOR button_focus]$INFO[ListItem.Label][/COLOR]</label>
                 <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
- <visible>!Container.Content()</visible>
+                <visible>!Container.Content()</visible>
                 <visible>!Window.IsActive(music)</visible>                
                 <animation effect="slide" end="0,6" time="0" condition="Skin.HasSetting(cd) + Container.Content(albums) + !String.IsEmpty(ListItem.Art(discart))">conditional</animation>
 		    </control>
@@ -1599,7 +1326,8 @@
                 <top>$PARAM[top]</top>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>reg25</font>
+                <font>reg24</font>
+                <textcolor>button_focus</textcolor>
                 <label>$INFO[ListItem.Label]</label>
                 <visible>Container.Content()</visible>
             </control>
@@ -1715,7 +1443,19 @@
 		    	<label>[COLOR button_focus]$INFO[ListItem.Label][/COLOR]</label>
                 <scroll>true</scroll>
                 <scrollspeed>10</scrollspeed>
-                <visible>Container.Content() | ![Container.Content() | Container.Content(seasons) | Container.Content(tvshows) | Container.Content(sets) | Container.Content(movies)]</visible>     
+                <visible>Container.Content() | ![Container.Content(seasons) | Container.Content(tvshows) | Container.Content(sets) | Container.Content(movies)]</visible>     
+		    </control>
+            <control type="label">
+                <height>10%</height>
+		    	<left>20</left>
+		    	<right>20</right>
+                <bottom>22</bottom>
+		    	<align>center</align>
+		    	<aligny>center</aligny>
+                <font>reg20</font>
+			    <shadowcolor>text_shadow</shadowcolor>
+		    	<label>[COLOR button_focus]$INFO[ListItem.Label][/COLOR]</label>     
+                <visible>[Container.Content(movies) | Container.Content(seasons) | Container.Content(tvshows) | Container.Content(sets) | Container.Content(episodes)] + ![String.IsEqual(ListItem.DbType,episode) | String.IsEqual(ListItem.DBType,tvshow) | String.IsEqual(ListItem.DBType,season) | String.IsEqual(ListItem.DBType,set) | String.IsEqual(ListItem.DBType,movie)]</visible>     
 		    </control>
         </definition>    
     </include>    
@@ -1792,7 +1532,19 @@
                 <font>reg21</font>
 			    <shadowcolor>text_shadow</shadowcolor>
 		    	<label>$INFO[ListItem.Label]</label>
-                <visible>Container.Content() | ![Container.Content() | Container.Content(seasons) | Container.Content(tvshows) | Container.Content(sets) | Container.Content(movies)]</visible>     
+                <visible>Container.Content() | ![Container.Content(seasons) | Container.Content(tvshows) | Container.Content(sets) | Container.Content(movies)]</visible>     
+		    </control>
+                        <control type="label">
+                <height>10%</height>
+		    	<left>20</left>
+		    	<right>20</right>
+                <bottom>20</bottom>
+		    	<align>center</align>
+		    	<aligny>center</aligny>
+                <font>reg21</font>
+			    <shadowcolor>text_shadow</shadowcolor>
+		    	<label>$INFO[ListItem.Label]</label>     
+                <visible>[Container.Content(movies) | Container.Content(seasons) | Container.Content(tvshows) | Container.Content(sets) | Container.Content(episodes)] + ![String.IsEqual(ListItem.DbType,episode) | String.IsEqual(ListItem.DBType,tvshow) | String.IsEqual(ListItem.DBType,season) | String.IsEqual(ListItem.DBType,set) | String.IsEqual(ListItem.DBType,movie)]</visible>     
 		    </control>
         </definition>
     </include>    

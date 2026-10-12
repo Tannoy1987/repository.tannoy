@@ -1153,5 +1153,4 @@
 	</variable>
 	<expression name="IsSettingsOrMediaWindow">Player.HasVideo + [Window.IsActive(videos) | Window.IsActive(appearancesettings) | Window.IsActive(playersettings) | Window.IsActive(servicesettings) | Window.IsActive(pvrsettings) | Window.IsActive(mediasettings) | Window.IsActive(systemsettings) | Window.IsActive(addonbrowser) | Window.IsActive(music) | Window.IsActive(pictures) | Window.IsActive(programs)]</expression>
 
-
 </includes>
