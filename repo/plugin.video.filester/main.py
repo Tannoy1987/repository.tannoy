@@ -54,6 +54,7 @@ ALLOWED_IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
 MAX_THUMB_SIZE = 5 * 1024 * 1024  # 5 MB
 
 SESSION_THUMB_PREFIX = "Filester.FolderThumb."
+SESSION_THUMB_NONE = "__NONE__"
 
 PLACEHOLDER_THUMB_PATHS = ('/img/meta.png',)
 
@@ -113,18 +114,32 @@ def is_placeholder_thumb(url: Optional[str]) -> bool:
     return path.endswith(PLACEHOLDER_THUMB_PATHS)
 
 
-def inline_thumbnail(item: Dict[str, Any]) -> Optional[str]:
-    thumb = item.get('thumbnail_url')
-    if thumb:
-        if thumb.startswith('http'):
-            resolved = thumb
-        elif thumb.startswith('/'):
-            resolved = f"{SITE_BASE}{thumb}"
-        else:
-            resolved = f"{SITE_BASE}/{thumb}"
-        if not is_placeholder_thumb(resolved):
-            return resolved
+def _resolve_thumb(thumb: str) -> str:
+    if thumb.startswith(('http://', 'https://')):
+        return thumb
+    if thumb.startswith('/'):
+        return f"{SITE_BASE}{thumb}"
+    return f"{SITE_BASE}/{thumb}"
 
+
+def _is_false(value: Any) -> bool:
+    return value is False or (isinstance(value, str) and value.strip().lower() == 'false')
+
+
+def inline_thumbnail(item: Dict[str, Any]) -> Optional[str]:
+    # Prefer explicit URL fields
+    for key in ('thumbnail_url', 'preview_url'):
+        thumb = item.get(key)
+        if thumb:
+            resolved = _resolve_thumb(thumb)
+            if not is_placeholder_thumb(resolved):
+                return resolved
+
+    # If the API explicitly says there's no thumbnail, don't invent one
+    if _is_false(item.get('has_thumbnail')):
+        return None
+
+    # Fallback: build from uuid/slug
     ident = item.get('uuid') or item.get('file_uuid') or item.get('slug')
     if ident:
         candidate = f"{SITE_BASE}/t/{ident}"
@@ -164,6 +179,42 @@ def extract_folder_thumb(folder: Dict[str, Any]) -> Optional[str]:
                     if not is_placeholder_thumb(resolved):
                         return resolved
     return None
+
+
+def parse_upload_date(raw: Any) -> Optional[str]:
+    """Convert '2026-10-12T00:00:00Z' to '2026-10-12 00:00:00' for Kodi."""
+    if not raw or not isinstance(raw, str):
+        return None
+    try:
+        cleaned = raw.replace('T', ' ').rstrip('Z').strip()
+        return cleaned.split('.')[0]
+    except Exception:
+        return None
+
+
+def build_plot(file: Dict[str, Any]) -> Optional[str]:
+    parts: List[str] = []
+
+    album = file.get('album_name')
+    if album:
+        parts.append(f"Album: {album}")
+
+    try:
+        size_mb = float(file.get('size_mb') or 0)
+        if size_mb > 0:
+            parts.append(f"Size: {size_mb:.1f} MB")
+    except (ValueError, TypeError):
+        pass
+
+    views = file.get('views')
+    if views:
+        parts.append(f"Views: {views}")
+
+    downloads = file.get('downloads')
+    if downloads:
+        parts.append(f"Downloads: {downloads}")
+
+    return "\n".join(parts) if parts else None
 
 
 # ---------------------------------------------------------------------------
@@ -639,7 +690,6 @@ class FilesterAPI:
             with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
                 html = resp.read().decode('utf-8', errors='replace')
 
-            # <meta property="og:image" content="...">  (attribute order may vary)
             m = re.search(
                 r'<meta[^>]+property=["\']og:image["\'][^>]+'
                 r'content=["\']([^"\']+)["\']',
@@ -841,6 +891,21 @@ class FilesterAPI:
             log(f"Move file {file_id} failed: {e}", xbmc.LOGERROR)
             return False
 
+    def move_folder(self, folder_id: str,
+                    parent_id: Optional[str]) -> bool:
+        payload: Dict[str, Any] = {
+            "folder": folder_id,
+            "parent": parent_id if parent_id else None,
+        }
+        try:
+            self.request(f"{API_BASE}/folder/move",
+                         method='POST', data=payload)
+            self.invalidate_folders_cache()
+            return True
+        except Exception as e:
+            log(f"Move folder {folder_id} failed: {e}", xbmc.LOGERROR)
+            return False
+
     def create_folder_and_move(self, name: str, file_id: str,
                                 parent_id: Optional[str] = None) -> Optional[str]:
         new_id = self.create_folder(name, parent_id=parent_id)
@@ -910,6 +975,60 @@ class DirectoryHandler:
             log(f"View mode set failed: {e}")
 
     @staticmethod
+    def _sort_folders(folders: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Alphabetical, case-insensitive."""
+        try:
+            return sorted(
+                folders,
+                key=lambda f: (f.get('name') or '').lower(),
+            )
+        except Exception as e:
+            log(f"Folder sort failed: {e}", xbmc.LOGWARNING)
+            return folders
+
+    @staticmethod
+    def _sort_files(files: List[Dict[str, Any]],
+                    by_date_desc: bool) -> List[Dict[str, Any]]:
+        if not files:
+            return files
+
+        DATE_FIELDS = ('created_at', 'upload_date', 'uploaded_at', 'created')
+
+        def date_str(f: Dict[str, Any]) -> str:
+            for field in DATE_FIELDS:
+                val = f.get(field)
+                if val:
+                    s = str(val).replace('T', ' ').rstrip('Z').strip()
+                    return s.split('.')[0]
+            return ''
+
+        def numeric_id(f: Dict[str, Any]) -> int:
+            try:
+                return int(f.get('id') or 0)
+            except (ValueError, TypeError):
+                return 0
+
+        try:
+            if by_date_desc:
+                # Sort by (date, id) descending. Same-day uploads tie on
+                # created_at (it's always midnight), so id desc breaks the
+                # tie and gives a stable newest-first order.
+                return sorted(
+                    files,
+                    key=lambda f: (date_str(f), numeric_id(f)),
+                    reverse=True,
+                )
+
+            return sorted(
+                files,
+                key=lambda f: (f.get('name')
+                               or f.get('original_name') or '').lower(),
+            )
+        except Exception as e:
+            log(f"File sort failed: {e}", xbmc.LOGWARNING)
+            return files
+
+    @staticmethod
     def _parent_id(folder: Dict[str, Any]) -> Optional[str]:
         parent = folder.get('parent')
         if parent in (None, '', 0, '0'):
@@ -968,6 +1087,22 @@ class DirectoryHandler:
                 out.extend(self._build_folder_tree(folders, fid, level + 1))
         return out
 
+    def _descendant_ids(self, folder_id: str) -> set:
+        """Return folder_id plus all descendants, so a folder can't be
+        moved into itself or one of its children."""
+        out = {str(folder_id)}
+        changed = True
+        while changed:
+            changed = False
+            for f in self._get_all_folders():
+                fid = self._folder_id(f)
+                if fid is None or fid in out:
+                    continue
+                if self._parent_id(f) in out:
+                    out.add(fid)
+                    changed = True
+        return out
+
     def _thumb_for(self, item: Dict[str, Any]) -> Optional[str]:
         inline = inline_thumbnail(item)
         if inline:
@@ -987,10 +1122,16 @@ class DirectoryHandler:
           1. Session in-memory cache (within this Kodi run)
           2. thumbnail field on the folder object from the API (if ever added)
           3. Public folder page og:image meta tag
+
+        Negative results are cached too, so folders with no thumb don't
+        re-hit the public page on every list draw.
         """
         fid = str(folder_id)
 
         cached = session_get_thumb(fid)
+        if cached == SESSION_THUMB_NONE:
+            log(f"Thumb for {fid}: session cache (none)")
+            return None
         if cached:
             log(f"Thumb for {fid}: session cache")
             return cached
@@ -1010,7 +1151,8 @@ class DirectoryHandler:
             session_set_thumb(fid, web_thumb)
             return web_thumb
 
-        log(f"Thumb for {fid}: none found")
+        log(f"Thumb for {fid}: none found (cached)")
+        session_set_thumb(fid, SESSION_THUMB_NONE)
         return None
 
     def add_new_folder_item(self, parent_id: Optional[str]) -> None:
@@ -1067,6 +1209,8 @@ class DirectoryHandler:
              f"RunPlugin({build_url({'action': 'refresh_folder', 'folder_id': folder_id})})"),
             ("New Subfolder",
              f"RunPlugin({build_url({'action': 'create_folder', 'parent_id': folder_id})})"),
+            ("Move Folder…",
+             f"RunPlugin({build_url({'action': 'move_folder_prompt', 'folder_id': folder_id})})"),
             ("Delete Folder",
              f"RunPlugin({build_url({'action': 'delete_folder', 'folder_id': folder_id})})"),
         ], replaceItems=False)
@@ -1081,7 +1225,7 @@ class DirectoryHandler:
     def add_file_item(self, file: Dict[str, Any],
                       current_folder_name: Optional[str] = None,
                       current_folder_id: Optional[str] = None) -> None:
-        name = file.get('name', 'Unknown')
+        name = file.get('name') or file.get('original_name') or 'Unknown'
         file_id = file.get('id')
 
         file_folder_id = file.get('folder_id')
@@ -1093,6 +1237,17 @@ class DirectoryHandler:
         info_tag = item.getVideoInfoTag()
         info_tag.setTitle(name)
         info_tag.setMediaType('video')
+
+        upload_date = parse_upload_date(file.get('upload_date'))
+        if upload_date:
+            try:
+                info_tag.setDateAdded(upload_date)
+            except Exception:
+                pass
+
+        plot = build_plot(file)
+        if plot:
+            info_tag.setPlot(plot)
 
         item.setProperty("IsPlayable", "true")
 
@@ -1175,6 +1330,9 @@ class DirectoryHandler:
                 continue
             if inline_thumbnail(f):
                 continue
+            # API says no thumbnail exists — no point fetching details
+            if _is_false(f.get('has_thumbnail')):
+                continue
             known, _ = self.api.cached_thumbnail(str(fid))
             if not known:
                 out.append(str(fid))
@@ -1225,6 +1383,9 @@ class DirectoryHandler:
         xbmcplugin.setContent(self.handle, 'videos')
         started = time.time()
 
+        at_root = folder_id in (None, '', '0')
+        MAX_SORT_PAGES = 20  # safety cap: 20 pages × 100 = 2000 files max
+
         try:
             folders = self._get_all_folders()
 
@@ -1232,17 +1393,36 @@ class DirectoryHandler:
                 self.add_new_folder_item(str(folder_id) if folder_id else None)
 
                 target_parent = str(folder_id) if folder_id else None
-                for f in folders:
-                    if self._parent_id(f) == target_parent:
-                        self.add_folder_item(f)
+                visible_folders = [
+                    f for f in folders if self._parent_id(f) == target_parent
+                ]
+                visible_folders = self._sort_folders(visible_folders)
+                for f in visible_folders:
+                    self.add_folder_item(f)
 
             current_folder_id = str(folder_id) if folder_id else None
             current_folder_name = (self._folder_name_by_id(folder_id)
                                    if folder_id else None)
 
-            response = (self.api.get_folder_files(folder_id, page)
-                        if folder_id else self.api.get_files(page))
-            files = response.get('data', [])
+            # ---- Fetch every page so sorting is global, not per-page ----
+            all_files: List[Dict[str, Any]] = []
+            fetch_page = 1
+            while fetch_page <= MAX_SORT_PAGES:
+                response = (self.api.get_folder_files(folder_id, fetch_page)
+                            if folder_id else self.api.get_files(fetch_page))
+                batch = response.get('data', []) or []
+                all_files.extend(batch)
+                if not self._has_next_page(response, fetch_page):
+                    break
+                fetch_page += 1
+
+            # Root -> newest first; inside any folder -> A-Z
+            all_files = self._sort_files(all_files, by_date_desc=at_root)
+
+            # ---- Slice the sorted list back into Kodi's page size ----
+            start = (page - 1) * PER_PAGE
+            files = all_files[start:start + PER_PAGE]
+            has_next = (start + PER_PAGE) < len(all_files)
 
             to_fetch = self._files_needing_fetch(files)
             if to_fetch:
@@ -1259,7 +1439,7 @@ class DirectoryHandler:
                     current_folder_id=current_folder_id,
                 )
 
-            if self._has_next_page(response, page):
+            if has_next:
                 extra = {'folder_id': folder_id} if folder_id else {}
                 self.add_next_page_item('list', page, **extra)
 
@@ -1372,7 +1552,6 @@ class DirectoryHandler:
 
         log(f"Uploaded folder thumb for {folder_id}: {url}")
 
-        # Clear any cached thumb for this folder so the new one is fetched
         session_clear_thumb(str(folder_id))
         self.api.invalidate_folders_cache()
         self._invalidate_folder_list()
@@ -1450,6 +1629,36 @@ class DirectoryHandler:
             refresh_container()
         else:
             notify("Filester", "Failed to move file", xbmcgui.NOTIFICATION_ERROR)
+
+    def move_folder_prompt(self, folder_id: Optional[str]) -> None:
+        if not folder_id:
+            return
+
+        folders = self._get_all_folders()
+        if not folders:
+            notify("Filester", "No folders available",
+                   xbmcgui.NOTIFICATION_ERROR)
+            return
+
+        excluded = self._descendant_ids(str(folder_id))
+        tree = [(fid, name) for fid, name in self._build_folder_tree(folders)
+                if fid not in excluded]
+
+        display = ["[Root]"] + [name for _, name in tree]
+        ids = [""] + [fid for fid, _ in tree]
+
+        idx = xbmcgui.Dialog().select("Move folder to", display)
+        if idx < 0:
+            return
+
+        target = ids[idx] or None
+        if self.api.move_folder(folder_id, target):
+            self._invalidate_folder_list()
+            notify("Filester", "Folder moved")
+            refresh_container()
+        else:
+            notify("Filester", "Failed to move folder",
+                   xbmcgui.NOTIFICATION_ERROR)
 
 
 # ---------------------------------------------------------------------------
@@ -1530,6 +1739,8 @@ def main() -> None:
             )
         elif action == "move_file_prompt":
             handler.move_file_prompt(params.get("file_id"))
+        elif action == "move_folder_prompt":
+            handler.move_folder_prompt(params.get("folder_id"))
         else:
             handler.list_directory(
                 folder_id=params.get("folder_id"),

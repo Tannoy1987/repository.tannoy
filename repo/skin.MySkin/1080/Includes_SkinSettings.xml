@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<includes>
+
+	<variable name="SkinSettingsHelpTextVar">
+		<value condition="Container(9000).HasFocus(1)">$LOCALIZE[31129]</value>
+		<value condition="Container(9000).HasFocus(2)">$LOCALIZE[31130]</value>
+		<value condition="Container(9000).HasFocus(3)">$LOCALIZE[31169]</value>
+		<value condition="Container(9000).HasFocus(4)">$LOCALIZE[31171]</value>
+	</variable>
+
+<!--Home Menu Items-->
+
+	<variable name="povlayout">
+		<value condition="String.IsEqual(Skin.String(home_layout),1)">Disabled</value>
+		<value condition="String.IsEqual(Skin.String(home_layout),2)">Flix</value>
+		<value condition="String.IsEqual(Skin.String(home_layout),3)">Rows</value>
+		<value condition="String.IsEqual(Skin.String(home_layout),4)">List</value>
+		<value condition="String.IsEqual(Skin.String(home_layout),5)">NEW LAYOUT</value>
+		<value>Disabled</value>		
+	</variable>	
+	<variable name="tvlayout">
+		<value condition="String.IsEqual(Skin.String(tv_layout),1)">Disabled</value>
+		<value condition="String.IsEqual(Skin.String(tv_layout),2)">Kodi</value>
+		<value condition="String.IsEqual(Skin.String(tv_layout),3)">GIPTV</value>
+		<value condition="String.IsEqual(Skin.String(tv_layout),4)">Xsteam</value>
+		<value>Disabled</value>
+	</variable>	
+    <variable name="addon_widget_size">
+        <value condition="String.IsEqual(Skin.String(addon_widget_size),1)">Disabled</value>
+        <value condition="String.IsEqual(Skin.String(addon_widget_size),2)">Small</value>
+        <value condition="String.IsEqual(Skin.String(addon_widget_size),3)">Large</value>
+        <value condition="String.IsEqual(Skin.String(addon_widget_size),4)">No Labels</value>
+    </variable>
+
+
+
+<!--Visual Settings-->  
+	<variable name="BackgroundOverlayTypeVar">
+		<value condition="String.IsEqual(Skin.String(background_overlay),0)">$LOCALIZE[231]</value>
+		<value>$INFO[Skin.String(background_overlay),$LOCALIZE[467] ]</value>
+	</variable>
+	<variable name="power_menu_layout">
+		<value condition="String.IsEqual(Skin.String(power_menu_layout),1)">Mouse</value>
+		<value condition="String.IsEqual(Skin.String(power_menu_layout),2)">Landscape</value>
+		<value condition="String.IsEqual(Skin.String(power_menu_layout),3)">Portrait </value>
+	</variable>
+	<variable name="musicosd">
+		<value condition="String.IsEqual(Skin.String(musicosd),1)">Basic</value>
+		<value condition="String.IsEqual(Skin.String(musicosd),2)">Player</value>
+	</variable>
+
+	<variable name="cd_color">
+		<value condition="String.IsEqual(Skin.String(cd_color),1)">Gold</value>
+		<value condition="String.IsEqual(Skin.String(cd_color),2)">Cyan</value>
+		<value condition="String.IsEqual(Skin.String(cd_color),3)">Blue</value>
+	</variable>	
+	<variable name="cd_color_location">
+		<value condition="String.IsEqual(Skin.String(cd_color),1)">flags/cds/gold.png</value>
+	    <value condition="String.IsEqual(Skin.String(cd_color),2)">flags/cds/cyan.png</value>
+	    <value condition="String.IsEqual(Skin.String(cd_color),3)">flags/cds/blue.png</value>
+	</variable>	
+
+
+<!--On Screen Display-->  
+	<variable name="SkinSettingOSDAutoCloseTime">
+		<value condition="!String.IsEmpty(Skin.String(OSDAutoCloseTime))">$INFO[Skin.String(OSDAutoCloseTime)]</value>
+		<value condition="String.IsEmpty(Skin.String(OSDAutoCloseTime))">4</value>
+	</variable>
+	<variable name="osd_clearlogo">
+		<value condition="String.IsEqual(Skin.String(osd_clearlogo),1)">Disabled</value>
+		<value condition="String.IsEqual(Skin.String(osd_clearlogo),2)">Clearlogo</value>
+		<value condition="String.IsEqual(Skin.String(osd_clearlogo),3)">Labels</value>
+	</variable>
+	<variable name="ppilayout">
+		<value condition="String.IsEqual(Skin.String(ppi_layout),1)">Default</value>
+		<value condition="String.IsEqual(Skin.String(ppi_layout),2)">Custom</value>
+		<value condition="String.IsEqual(Skin.String(ppi_layout),3)">VS10</value>
+		<value condition="String.IsEqual(Skin.String(ppi_layout),4)">CustomTinyPPI</value>
+		<value condition="String.IsEqual(Skin.String(ppi_layout),5)">TinyPPI</value>
+		<value>Default</value>
+	</variable>	
+	<variable name="osd_info_layout">
+		<value condition="String.IsEqual(Skin.String(osd_info_layout),1)">Plot</value>
+		<value condition="String.IsEqual(Skin.String(osd_info_layout),2)">Header / Plot / Mediaflags</value>
+		<value condition="String.IsEqual(Skin.String(osd_info_layout),3)">Header / Plot / Mediaflags / Poster</value>
+	</variable>
+	<variable name="mediaflags_layout">
+		<value condition="String.IsEqual(Skin.String(mediaflags_layout),1)">Small</value>
+		<value condition="String.IsEqual(Skin.String(mediaflags_layout),2)">Medium</value>
+		<value condition="String.IsEqual(Skin.String(mediaflags_layout),3)">Large</value>
+	</variable>    
+	<variable name="osd_background">
+		<value condition="String.IsEqual(Skin.String(osd_background),1)">Clear</value>
+		<value condition="String.IsEqual(Skin.String(osd_background),2)">Fade</value>
+	</variable>
+
+
+</includes>
