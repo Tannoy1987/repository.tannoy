@@ -32,6 +32,7 @@ SITE_BASE = "https://filester.me"
 PER_PAGE = 100
 REQUEST_TIMEOUT = 30
 UPLOAD_TIMEOUT = 60
+THUMB_FETCH_TIMEOUT = 8  # seconds; best-effort, must not stall listings
 MAX_RETRIES = 3
 USER_AGENT = "Kodi-Filester/1.0"
 WEB_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -105,6 +106,38 @@ def jittered_backoff(attempt: int, retry_after: Optional[float] = None) -> float
         return min(max(retry_after, 0.5), BACKOFF_MAX)
     base = min(BACKOFF_BASE ** attempt, BACKOFF_MAX)
     return base * (0.5 + random.random() * 0.5)
+
+
+def _listing_signature(payload: Dict[str, Any]) -> tuple:
+    """Stable fingerprint of a listing payload.
+
+    Includes id, name, dates, folder_id, size, and has_thumbnail so that
+    renames, moves, uploads/deletes, and thumbnail additions trigger a
+    refresh — but excludes volatile counters (views, downloads) and
+    thumbnail URLs (which can carry cache-busting query strings), so those
+    never cause ghost refreshes.
+    """
+    if not isinstance(payload, dict):
+        return (str(payload),)
+    data = payload.get('data')
+    if not isinstance(data, list):
+        return (str(payload),)
+    sig = []
+    for item in data:
+        if isinstance(item, dict):
+            sig.append((
+                item.get('id') or item.get('uuid') or '',
+                item.get('name') or item.get('original_name') or '',
+                item.get('created_at') or item.get('upload_date') or '',
+                item.get('folder_id') or '',
+                item.get('size') or item.get('size_mb') or '',
+                bool(item.get('has_thumbnail')),
+            ))
+        else:
+            sig.append(str(item))
+    # Sort so server-side reordering doesn't count as a change; we sort
+    # client-side before display anyway.
+    return tuple(sorted(sig))
 
 
 def is_placeholder_thumb(url: Optional[str]) -> bool:
@@ -537,7 +570,7 @@ class FilesterAPI:
         def worker() -> None:
             try:
                 fresh = self._http_call(url, method, data, retries)
-                if fresh != old_data:
+                if _listing_signature(fresh) != _listing_signature(old_data):
                     self._store_caches(url, fresh)
                     log(f"SWR: content changed for {url} — refreshing")
                     xbmc.executebuiltin("Container.Refresh")
@@ -676,9 +709,15 @@ class FilesterAPI:
             self._thumbnail_cache.set(file_id, url)
         return url or None
 
-    def fetch_public_folder_thumb(self, folder_id: str) -> Optional[str]:
-        """Fetch the public folder page and extract the og:image thumbnail
-        URL. Works only for public folders; returns None otherwise."""
+    def fetch_public_folder_thumb(
+        self, folder_id: str
+    ) -> Tuple[bool, Optional[str]]:
+        """Fetch the public folder page and extract og:image.
+
+        Returns (definitive, thumb_url):
+          definitive=True  -> the server responded; caching a negative is safe
+          definitive=False -> network/timeout error; retry on next listing
+        """
         url = f"{SITE_BASE}/f/{quote_param(folder_id)}"
         headers = {
             "User-Agent": WEB_UA,
@@ -687,7 +726,9 @@ class FilesterAPI:
         }
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+            with urllib.request.urlopen(
+                req, timeout=THUMB_FETCH_TIMEOUT
+            ) as resp:
                 html = resp.read().decode('utf-8', errors='replace')
 
             m = re.search(
@@ -706,19 +747,24 @@ class FilesterAPI:
                 resolved = absolute_thumb_url(thumb)
                 if is_placeholder_thumb(resolved):
                     log(f"Ignoring placeholder og:image for {folder_id}")
-                    return None
+                    return (True, None)
                 log(f"Public folder thumb for {folder_id}: {resolved}")
-                return resolved
+                return (True, resolved)
 
             log(f"No og:image found on public page for {folder_id}",
                 xbmc.LOGDEBUG)
+            return (True, None)
+
         except urllib.error.HTTPError as e:
             log(f"Public folder page HTTP {e.code} for {folder_id}",
                 xbmc.LOGWARNING)
+            # 404/410 mean "this folder has no public page" = definitive.
+            # Other HTTP errors are server-side; treat as transient.
+            return (e.code in (404, 410), None)
         except Exception as e:
             log(f"Public folder thumb fetch failed for {folder_id}: {e}",
                 xbmc.LOGWARNING)
-        return None
+            return (False, None)
 
     def upload_folder_thumbnail(self, folder_id: str,
                                  image_path: str) -> Optional[str]:
@@ -989,6 +1035,8 @@ class DirectoryHandler:
     @staticmethod
     def _sort_files(files: List[Dict[str, Any]],
                     by_date_desc: bool) -> List[Dict[str, Any]]:
+        """by_date_desc=True -> newest first (root).
+           by_date_desc=False -> alphabetical A-Z (inside folders)."""
         if not files:
             return files
 
@@ -1123,8 +1171,10 @@ class DirectoryHandler:
           2. thumbnail field on the folder object from the API (if ever added)
           3. Public folder page og:image meta tag
 
-        Negative results are cached too, so folders with no thumb don't
-        re-hit the public page on every list draw.
+        Negative results from a definitive server response are cached too,
+        so folders with no thumb don't re-hit the public page on every list
+        draw. Transient network failures are NOT cached, so a thumbnail can
+        appear later once connectivity recovers.
         """
         fid = str(folder_id)
 
@@ -1146,13 +1196,16 @@ class DirectoryHandler:
                 return api_thumb
             break
 
-        web_thumb = self.api.fetch_public_folder_thumb(fid)
+        definitive, web_thumb = self.api.fetch_public_folder_thumb(fid)
         if web_thumb:
             session_set_thumb(fid, web_thumb)
             return web_thumb
 
-        log(f"Thumb for {fid}: none found (cached)")
-        session_set_thumb(fid, SESSION_THUMB_NONE)
+        if definitive:
+            log(f"Thumb for {fid}: none found (cached)")
+            session_set_thumb(fid, SESSION_THUMB_NONE)
+        else:
+            log(f"Thumb for {fid}: fetch failed, will retry next time")
         return None
 
     def add_new_folder_item(self, parent_id: Optional[str]) -> None:
@@ -1405,16 +1458,38 @@ class DirectoryHandler:
                                    if folder_id else None)
 
             # ---- Fetch every page so sorting is global, not per-page ----
+            # Guard against APIs that ignore the page param and return the
+            # same batch repeatedly (observed on the folder-scoped endpoint).
             all_files: List[Dict[str, Any]] = []
+            seen_ids = set()
             fetch_page = 1
+            pages_fetched = 0
             while fetch_page <= MAX_SORT_PAGES:
                 response = (self.api.get_folder_files(folder_id, fetch_page)
                             if folder_id else self.api.get_files(fetch_page))
-                batch = response.get('data', []) or []
-                all_files.extend(batch)
+                batch = response.get('data') or []
+                if not batch:
+                    break
+                pages_fetched += 1
+                new_items = 0
+                for item in batch:
+                    item_id = item.get('id')
+                    if item_id is not None:
+                        if item_id in seen_ids:
+                            continue
+                        seen_ids.add(item_id)
+                    all_files.append(item)
+                    new_items += 1
+                if new_items == 0:
+                    log(f"Pagination stalled at page {fetch_page} "
+                        f"(no new items) — stopping", xbmc.LOGWARNING)
+                    break
                 if not self._has_next_page(response, fetch_page):
                     break
                 fetch_page += 1
+
+            log(f"Fetched {pages_fetched} page(s), "
+                f"{len(all_files)} unique file(s)", xbmc.LOGDEBUG)
 
             # Root -> newest first; inside any folder -> A-Z
             all_files = self._sort_files(all_files, by_date_desc=at_root)
