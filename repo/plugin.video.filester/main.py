@@ -1,5 +1,6 @@
 import os
 import re
+import ssl
 import sys
 import json
 import time
@@ -32,7 +33,7 @@ SITE_BASE = "https://filester.me"
 PER_PAGE = 100
 REQUEST_TIMEOUT = 30
 UPLOAD_TIMEOUT = 60
-THUMB_FETCH_TIMEOUT = 8  # seconds; best-effort, must not stall listings
+THUMB_FETCH_TIMEOUT = 8
 MAX_RETRIES = 3
 USER_AGENT = "Kodi-Filester/1.0"
 WEB_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -44,20 +45,25 @@ MEMORY_CACHE_MAX = 512
 FILE_DETAILS_CACHE_MAX = 1024
 THUMBNAIL_CACHE_MAX = 4096
 THUMB_FETCH_WORKERS = 8
+FOLDER_THUMB_CONCURRENT = 3
 DOS_WARN_SECONDS = 5.0
 BACKOFF_BASE = 2.0
 BACKOFF_MAX = 8.0
 MAX_FOLDER_NAME_LEN = 100
 
 LISTING_REVALIDATE_SECONDS = 30
+REFRESH_RATE_LIMIT_PER_MIN = 5
 
 ALLOWED_IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
-MAX_THUMB_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_THUMB_SIZE = 5 * 1024 * 1024
 
 SESSION_THUMB_PREFIX = "Filester.FolderThumb."
 SESSION_THUMB_NONE = "__NONE__"
 
 PLACEHOLDER_THUMB_PATHS = ('/img/meta.png',)
+
+FOLDER_THUMB_CACHE_PREFIX = "folder_thumb:"
+FILE_THUMB_CACHE_PREFIX = "file_thumb:"
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +107,137 @@ def refresh_container() -> None:
     xbmc.executebuiltin("Container.Refresh")
 
 
+def _current_plugin_folder() -> Tuple[Any, bool]:
+    try:
+        current = xbmc.getInfoLabel('Container.FolderPath') or ''
+    except Exception:
+        return ('__unknown__', False)
+    if not current or not current.startswith(BASE_URL):
+        return (None, False)
+    try:
+        parsed = urllib.parse.urlparse(current)
+        qs = urllib.parse.parse_qs(parsed.query)
+    except Exception:
+        return ('__unknown__', True)
+    action = (qs.get('action') or [''])[0]
+    if action not in ('', 'list'):
+        return ('__unknown__', True)
+    fid = (qs.get('folder_id') or [''])[0]
+    return (fid if fid else None, True)
+
+
+def _is_viewing(folder_id: Optional[str]) -> bool:
+    result, in_plugin = _current_plugin_folder()
+    if result == '__unknown__' or not in_plugin:
+        return False
+    if not folder_id or folder_id in ('', '0'):
+        return result is None
+    return result == str(folder_id)
+
+
+def _is_in_plugin() -> bool:
+    try:
+        current = xbmc.getInfoLabel('Container.FolderPath') or ''
+    except Exception:
+        return False
+    return current.startswith(BASE_URL)
+
+
+def _do_refresh(debounce_seconds: float) -> None:
+    win = xbmcgui.Window(10000)
+    now = time.time()
+    try:
+        last = float(win.getProperty('Filester.LastRefreshTs') or 0)
+    except (ValueError, TypeError):
+        last = 0.0
+    if now - last < debounce_seconds:
+        return
+    times_key = 'Filester.RefreshTimes'
+    try:
+        times_str = win.getProperty(times_key) or ''
+        times = [float(t) for t in times_str.split(',') if t]
+    except (ValueError, TypeError):
+        times = []
+    times = [t for t in times if now - t < 60]
+    if len(times) >= REFRESH_RATE_LIMIT_PER_MIN:
+        log(f"Refresh rate-limited ({len(times)}/60s) — suppressing",
+            xbmc.LOGWARNING)
+        return
+    times.append(now)
+    win.setProperty(times_key, ','.join(f"{t:.3f}" for t in times))
+    log(f"Container.Refresh (window={debounce_seconds}s count={len(times)})")
+    win.setProperty('Filester.LastRefreshTs', str(now))
+    xbmc.executebuiltin("Container.Refresh")
+
+
+_refresh_sched_lock = threading.Lock()
+
+
+def _debounced_refresh_container(target_folder_id: Optional[str],
+                                  debounce_seconds: float = 2.0) -> None:
+    if not _is_viewing(target_folder_id):
+        return
+    win = xbmcgui.Window(10000)
+    ctx = target_folder_id or '__root__'
+    last_key = f"Filester.LastRefreshTs.{ctx}"
+    sched_key = f"Filester.RefreshScheduled.{ctx}"
+    now = time.time()
+    try:
+        last = float(win.getProperty(last_key) or 0)
+    except (ValueError, TypeError):
+        last = 0.0
+    elapsed = now - last
+    with _refresh_sched_lock:
+        has_pending = bool(win.getProperty(sched_key))
+    if elapsed >= debounce_seconds and not has_pending:
+        win.setProperty(last_key, str(now))
+        _do_refresh(debounce_seconds)
+        return
+    if has_pending:
+        return
+    with _refresh_sched_lock:
+        if win.getProperty(sched_key):
+            return
+        win.setProperty(sched_key, "1")
+    delay = max(debounce_seconds - elapsed, 0.1) + 0.05
+
+    def _do_trailing():
+        try:
+            xbmc.sleep(int(delay * 1000))
+            with _refresh_sched_lock:
+                win.clearProperty(sched_key)
+            if _is_viewing(target_folder_id):
+                win.setProperty(last_key, str(time.time()))
+                _do_refresh(0.0)
+        except Exception as e:
+            log(f"Trailing refresh failed: {e}", xbmc.LOGWARNING)
+
+    threading.Thread(target=_do_trailing, daemon=True).start()
+
+
+def _debounced_refresh_any(debounce_seconds: float = 2.0) -> None:
+    if not _is_in_plugin():
+        return
+    _do_refresh(debounce_seconds)
+
+
+def _extract_folder_from_url(url: str) -> Any:
+    if '/folders' in url and '/folder/' not in url:
+        return '__any__'
+    m = re.search(r'/folder/([^/]+)/files', url)
+    if m:
+        return urllib.parse.unquote(m.group(1))
+    if '/files' in url:
+        try:
+            parsed = urllib.parse.urlparse(url)
+            qs = urllib.parse.parse_qs(parsed.query)
+        except Exception:
+            return '__any__'
+        fid = (qs.get('folder') or [''])[0]
+        return fid if fid else None
+    return '__any__'
+
+
 def jittered_backoff(attempt: int, retry_after: Optional[float] = None) -> float:
     if retry_after is not None:
         return min(max(retry_after, 0.5), BACKOFF_MAX)
@@ -109,14 +246,6 @@ def jittered_backoff(attempt: int, retry_after: Optional[float] = None) -> float
 
 
 def _listing_signature(payload: Dict[str, Any]) -> tuple:
-    """Stable fingerprint of a listing payload.
-
-    Includes id, name, dates, folder_id, size, and has_thumbnail so that
-    renames, moves, uploads/deletes, and thumbnail additions trigger a
-    refresh — but excludes volatile counters (views, downloads) and
-    thumbnail URLs (which can carry cache-busting query strings), so those
-    never cause ghost refreshes.
-    """
     if not isinstance(payload, dict):
         return (str(payload),)
     data = payload.get('data')
@@ -135,8 +264,6 @@ def _listing_signature(payload: Dict[str, Any]) -> tuple:
             ))
         else:
             sig.append(str(item))
-    # Sort so server-side reordering doesn't count as a change; we sort
-    # client-side before display anyway.
     return tuple(sorted(sig))
 
 
@@ -160,25 +287,19 @@ def _is_false(value: Any) -> bool:
 
 
 def inline_thumbnail(item: Dict[str, Any]) -> Optional[str]:
-    # Prefer explicit URL fields
     for key in ('thumbnail_url', 'preview_url'):
         thumb = item.get(key)
         if thumb:
             resolved = _resolve_thumb(thumb)
             if not is_placeholder_thumb(resolved):
                 return resolved
-
-    # If the API explicitly says there's no thumbnail, don't invent one
     if _is_false(item.get('has_thumbnail')):
         return None
-
-    # Fallback: build from uuid/slug
     ident = item.get('uuid') or item.get('file_uuid') or item.get('slug')
     if ident:
         candidate = f"{SITE_BASE}/t/{ident}"
         if not is_placeholder_thumb(candidate):
             return candidate
-
     return None
 
 
@@ -191,8 +312,6 @@ def absolute_thumb_url(path: str) -> str:
 
 
 def extract_folder_thumb(folder: Dict[str, Any]) -> Optional[str]:
-    """Return an absolute thumbnail URL from a folder object, checking a
-    range of plausible field names. Returns None if nothing is found."""
     for key in ('thumbnail_url', 'thumbnail', 'thumb',
                 'folder_thumbnail', 'folder_thumbnail_url',
                 'cover', 'cover_url', 'image', 'image_url', 'icon'):
@@ -215,7 +334,6 @@ def extract_folder_thumb(folder: Dict[str, Any]) -> Optional[str]:
 
 
 def parse_upload_date(raw: Any) -> Optional[str]:
-    """Convert '2026-10-12T00:00:00Z' to '2026-10-12 00:00:00' for Kodi."""
     if not raw or not isinstance(raw, str):
         return None
     try:
@@ -227,26 +345,21 @@ def parse_upload_date(raw: Any) -> Optional[str]:
 
 def build_plot(file: Dict[str, Any]) -> Optional[str]:
     parts: List[str] = []
-
     album = file.get('album_name')
     if album:
         parts.append(f"Album: {album}")
-
     try:
         size_mb = float(file.get('size_mb') or 0)
         if size_mb > 0:
             parts.append(f"Size: {size_mb:.1f} MB")
     except (ValueError, TypeError):
         pass
-
     views = file.get('views')
     if views:
         parts.append(f"Views: {views}")
-
     downloads = file.get('downloads')
     if downloads:
         parts.append(f"Downloads: {downloads}")
-
     return "\n".join(parts) if parts else None
 
 
@@ -302,7 +415,6 @@ class TTLCache:
             return value
 
     def get_with_age(self, key: str) -> Optional[Tuple[float, Any]]:
-        """Return (age_seconds, value) ignoring TTL, or None if missing."""
         with self._lock:
             entry = self._store.get(key)
             if entry is None:
@@ -353,6 +465,8 @@ class FilesterAPI:
 
         self._revalidating: set = set()
         self._reval_lock = threading.Lock()
+
+        self._folder_thumb_sem = threading.Semaphore(FOLDER_THUMB_CONCURRENT)
 
     @staticmethod
     def _prompt_api_key() -> Optional[str]:
@@ -450,7 +564,6 @@ class FilesterAPI:
         return None
 
     def _peek_cache(self, url: str) -> Optional[Tuple[float, Any]]:
-        """Return (age, data) for cached payload, ignoring TTL."""
         entry = self._memory_cache.get_with_age(url)
         if entry is not None:
             return entry
@@ -482,10 +595,8 @@ class FilesterAPI:
         marker = f"/folder/{quote_param(folder_id)}/files"
         for key in self._memory_cache.keys_matching(marker):
             self._memory_cache.delete(key)
-
         if not self.cache_enabled:
             return
-
         for page in range(1, 51):
             url = (f"{API_BASE}/folder/{quote_param(folder_id)}/files"
                    f"?page={page}&per_page={PER_PAGE}")
@@ -496,52 +607,60 @@ class FilesterAPI:
             except Exception as e:
                 log(f"Failed to delete folder cache file: {e}")
 
+    def cached_folder_thumb(self, folder_id: str) -> Tuple[bool, Optional[str]]:
+        key = f"{FOLDER_THUMB_CACHE_PREFIX}{folder_id}"
+        cached = self._memory_cache.get(key, self.cache_expiry)
+        if cached is not None:
+            return (True, cached.get('url'))
+        raw = self._read_disk_cache_raw(key)
+        if raw is not None:
+            ts, data = raw
+            if self.is_cache_valid(ts):
+                self._memory_cache.set(key, data)
+                return (True, data.get('url'))
+        return (False, None)
+
+    def cache_folder_thumb(self, folder_id: str, url: Optional[str]) -> None:
+        key = f"{FOLDER_THUMB_CACHE_PREFIX}{folder_id}"
+        payload = {'url': url}
+        self._memory_cache.set(key, payload)
+        if url is not None:
+            self._write_disk_cache(key, payload)
+
+    def invalidate_folder_thumb(self, folder_id: str) -> None:
+        self.invalidate_cache(f"{FOLDER_THUMB_CACHE_PREFIX}{folder_id}")
+
     def _auth_headers(self) -> Dict[str, str]:
         headers = {"User-Agent": USER_AGENT}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
-    def request(
-        self,
-        endpoint: str,
-        method: str = 'GET',
-        data: Optional[Dict[str, Any]] = None,
-        retries: int = MAX_RETRIES,
-    ) -> Dict[str, Any]:
+    def request(self, endpoint: str, method: str = 'GET',
+                data: Optional[Dict[str, Any]] = None,
+                retries: int = MAX_RETRIES) -> Dict[str, Any]:
         url = endpoint if endpoint.startswith('http') else f"{API_BASE}{endpoint}"
-
         if method != 'GET' or not self.cache_enabled:
             return self._http_call(url, method, data, retries)
-
         cached = self._read_caches(url)
         if cached is not None:
             return cached
-
         with self._lock_for(url):
             cached = self._read_caches(url)
             if cached is not None:
                 return cached
-
             payload = self._http_call(url, method, data, retries)
             self._store_caches(url, payload)
             return payload
 
-    def request_swr(
-        self,
-        endpoint: str,
-        method: str = 'GET',
-        data: Optional[Dict[str, Any]] = None,
-        retries: int = MAX_RETRIES,
-        revalidate_seconds: int = LISTING_REVALIDATE_SECONDS,
-    ) -> Dict[str, Any]:
-        """Stale-while-revalidate: return cached immediately; if stale,
-        revalidate in the background and refresh the container if changed."""
+    def request_swr(self, endpoint: str, method: str = 'GET',
+                    data: Optional[Dict[str, Any]] = None,
+                    retries: int = MAX_RETRIES,
+                    revalidate_seconds: int = LISTING_REVALIDATE_SECONDS
+                    ) -> Dict[str, Any]:
         url = endpoint if endpoint.startswith('http') else f"{API_BASE}{endpoint}"
-
         if method != 'GET' or not self.cache_enabled:
             return self._http_call(url, method, data, retries)
-
         cached = self._peek_cache(url)
         if cached is None:
             with self._lock_for(url):
@@ -551,29 +670,32 @@ class FilesterAPI:
                     self._store_caches(url, payload)
                     return payload
             return cached[1]
-
         age, cached_data = cached
         if age >= revalidate_seconds:
             self._schedule_revalidation(url, method, data, retries, cached_data)
         return cached_data
 
-    def _schedule_revalidation(
-        self, url: str, method: str,
-        data: Optional[Dict[str, Any]], retries: int,
-        old_data: Dict[str, Any],
-    ) -> None:
+    def _schedule_revalidation(self, url: str, method: str,
+                                data: Optional[Dict[str, Any]], retries: int,
+                                old_data: Dict[str, Any]) -> None:
         with self._reval_lock:
             if url in self._revalidating:
                 return
             self._revalidating.add(url)
+        target_folder = _extract_folder_from_url(url)
 
         def worker() -> None:
             try:
-                fresh = self._http_call(url, method, data, retries)
+                fresh = self._http_call(url, method, data, retries,
+                                        cache_bust=True)
                 if _listing_signature(fresh) != _listing_signature(old_data):
                     self._store_caches(url, fresh)
                     log(f"SWR: content changed for {url} — refreshing")
-                    xbmc.executebuiltin("Container.Refresh")
+                    if target_folder == '__any__':
+                        _debounced_refresh_any(debounce_seconds=3.0)
+                    else:
+                        _debounced_refresh_container(target_folder,
+                                                      debounce_seconds=3.0)
             except Exception as e:
                 log(f"SWR revalidation failed for {url}: {e}", xbmc.LOGWARNING)
             finally:
@@ -582,18 +704,13 @@ class FilesterAPI:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _http_call(
-        self,
-        url: str,
-        method: str,
-        data: Optional[Dict[str, Any]],
-        retries: int,
-    ) -> Dict[str, Any]:
+    def _http_call(self, url: str, method: str,
+                    data: Optional[Dict[str, Any]], retries: int,
+                    cache_bust: bool = False) -> Dict[str, Any]:
         if retries <= 0:
             raise RuntimeError(f"request({url}) called with retries <= 0")
-
         last_error: Optional[Exception] = None
-
+        ssl_bypassed = False
         for attempt in range(retries):
             retry_after: Optional[float] = None
             try:
@@ -602,30 +719,43 @@ class FilesterAPI:
                 if method in ('POST', 'PUT', 'PATCH') and data is not None:
                     body = json.dumps(data).encode('utf-8')
                     headers["Content-Type"] = "application/json"
-
+                if cache_bust:
+                    sep = '&' if '?' in url else '?'
+                    request_url = f"{url}{sep}_t={int(time.time() * 1000)}"
+                    headers["Cache-Control"] = "no-cache"
+                    headers["Pragma"] = "no-cache"
+                else:
+                    request_url = url
                 req = urllib.request.Request(
-                    url, data=body, headers=headers, method=method
+                    request_url, data=body, headers=headers, method=method
                 )
-
-                with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
-                    raw = resp.read().decode('utf-8')
-
+                if ssl_bypassed:
+                    ctx = ssl._create_unverified_context()
+                    with urllib.request.urlopen(
+                        req, timeout=REQUEST_TIMEOUT, context=ctx
+                    ) as resp:
+                        raw = resp.read().decode('utf-8')
+                else:
+                    with urllib.request.urlopen(
+                        req, timeout=REQUEST_TIMEOUT
+                    ) as resp:
+                        raw = resp.read().decode('utf-8')
                 try:
                     payload = json.loads(raw)
                 except json.JSONDecodeError as e:
                     last_error = e
-                    log(f"Invalid JSON from {url} (attempt {attempt + 1}/{retries})",
-                        xbmc.LOGWARNING)
+                    log(f"Invalid JSON from {url} "
+                        f"(attempt {attempt + 1}/{retries})", xbmc.LOGWARNING)
                 else:
                     if not payload.get('success', True):
                         raise Exception(
                             f"API Error: {payload.get('message', 'Unknown')}"
                         )
                     return payload
-
             except urllib.error.HTTPError as e:
                 if e.code in self._NON_RETRYABLE:
-                    log(f"HTTP {e.code} on {url} — not retrying", xbmc.LOGERROR)
+                    log(f"HTTP {e.code} on {url} — not retrying",
+                        xbmc.LOGERROR)
                     raise
                 ra = e.headers.get('Retry-After') if e.headers else None
                 if ra:
@@ -636,20 +766,36 @@ class FilesterAPI:
                 last_error = e
                 log(f"HTTP error {e.code} (attempt {attempt + 1}/{retries})",
                     xbmc.LOGWARNING)
-
-            except (urllib.error.URLError, ConnectionResetError, TimeoutError) as e:
+            except urllib.error.URLError as e:
+                reason = getattr(e, 'reason', None)
+                is_ssl_error = (
+                    isinstance(reason, ssl.SSLCertVerificationError)
+                    or 'CERTIFICATE_VERIFY_FAILED' in str(reason)
+                    or 'certificate verify failed' in str(reason).lower()
+                )
+                if is_ssl_error and not ssl_bypassed:
+                    log(f"SSL cert failed for {url}: {reason}. Bypassing.",
+                        xbmc.LOGERROR)
+                    notify("Filester",
+                           "SSL certificate expired — bypassing verification",
+                           xbmcgui.NOTIFICATION_WARNING, ms=5000)
+                    ssl_bypassed = True
+                    continue
                 last_error = e
                 log(f"Network error (attempt {attempt + 1}/{retries}): {e}",
                     xbmc.LOGWARNING)
-
+            except (ConnectionResetError, TimeoutError) as e:
+                last_error = e
+                log(f"Network error (attempt {attempt + 1}/{retries}): {e}",
+                    xbmc.LOGWARNING)
             except Exception:
                 raise
-
             if attempt < retries - 1:
                 time.sleep(jittered_backoff(attempt, retry_after))
-
         if last_error is None:
-            last_error = RuntimeError(f"request({url}) failed with no captured error")
+            last_error = RuntimeError(
+                f"request({url}) failed with no captured error"
+            )
         raise last_error
 
     def get_folders(self) -> List[Dict[str, Any]]:
@@ -657,7 +803,7 @@ class FilesterAPI:
 
     def get_files(self, page: int = 1,
                   folder_id: Optional[str] = None) -> Dict[str, Any]:
-        params = {'page': page, 'per_page': PER_PAGE}
+        params: Dict[str, Any] = {'page': page, 'per_page': PER_PAGE}
         if folder_id:
             params['folder'] = folder_id
         return self.request_swr(f"/files?{urllib.parse.urlencode(params)}")
@@ -674,15 +820,14 @@ class FilesterAPI:
             cached = self._file_details_cache.get(file_id, self.cache_expiry)
             if cached is not None:
                 return cached
-
         try:
             details = self.request(
                 f"/file/{quote_param(file_id)}"
             ).get('data', {}) or {}
         except Exception as e:
-            log(f"Failed to fetch details for {file_id}: {e}", xbmc.LOGWARNING)
+            log(f"Failed to fetch details for {file_id}: {e}",
+                xbmc.LOGWARNING)
             return {}
-
         if details and self.cache_enabled:
             self._file_details_cache.set(file_id, details)
         return details
@@ -691,33 +836,44 @@ class FilesterAPI:
         if not self.cache_enabled:
             return (False, None)
         val = self._thumbnail_cache.get(file_id, self.cache_expiry)
-        if val is None:
-            return (False, None)
-        if val == self._THUMB_MISSING:
-            return (True, None)
-        return (True, val)
+        if val is not None:
+            if val == self._THUMB_MISSING:
+                return (True, None)
+            return (True, val)
+        key = f"{FILE_THUMB_CACHE_PREFIX}{file_id}"
+        raw = self._read_disk_cache_raw(key)
+        if raw is not None:
+            ts, data = raw
+            if self.is_cache_valid(ts):
+                url = data.get('url') if data else None
+                self._thumbnail_cache.set(
+                    file_id, url if url else self._THUMB_MISSING
+                )
+                return (True, url)
+        return (False, None)
+
+    def _store_file_thumb(self, file_id: str, url: Optional[str]) -> None:
+        if not self.cache_enabled:
+            return
+        self._thumbnail_cache.set(
+            file_id, url if url else self._THUMB_MISSING
+        )
+        self._write_disk_cache(
+            f"{FILE_THUMB_CACHE_PREFIX}{file_id}", {'url': url}
+        )
 
     def thumbnail_for_file(self, file_id: str) -> Optional[str]:
         known, url = self.cached_thumbnail(file_id)
         if known:
             return url
-
         details = self.get_file_details(file_id)
         inline = inline_thumbnail(details)
-        url = inline if inline else self._THUMB_MISSING
-        if self.cache_enabled:
-            self._thumbnail_cache.set(file_id, url)
-        return url or None
+        self._store_file_thumb(file_id, inline)
+        return inline or None
 
     def fetch_public_folder_thumb(
         self, folder_id: str
     ) -> Tuple[bool, Optional[str]]:
-        """Fetch the public folder page and extract og:image.
-
-        Returns (definitive, thumb_url):
-          definitive=True  -> the server responded; caching a negative is safe
-          definitive=False -> network/timeout error; retry on next listing
-        """
         url = f"{SITE_BASE}/f/{quote_param(folder_id)}"
         headers = {
             "User-Agent": WEB_UA,
@@ -726,21 +882,35 @@ class FilesterAPI:
         }
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(
-                req, timeout=THUMB_FETCH_TIMEOUT
-            ) as resp:
-                html = resp.read().decode('utf-8', errors='replace')
-
+            try:
+                with urllib.request.urlopen(
+                    req, timeout=THUMB_FETCH_TIMEOUT
+                ) as resp:
+                    html = resp.read().decode('utf-8', errors='replace')
+            except urllib.error.URLError as e:
+                reason = getattr(e, 'reason', None)
+                is_ssl_error = (
+                    isinstance(reason, ssl.SSLCertVerificationError)
+                    or 'CERTIFICATE_VERIFY_FAILED' in str(reason)
+                    or 'certificate verify failed' in str(reason).lower()
+                )
+                if not is_ssl_error:
+                    raise
+                log(f"SSL error on public thumb {url}, retry unverified: "
+                    f"{reason}", xbmc.LOGWARNING)
+                ctx = ssl._create_unverified_context()
+                with urllib.request.urlopen(
+                    req, timeout=THUMB_FETCH_TIMEOUT, context=ctx
+                ) as resp:
+                    html = resp.read().decode('utf-8', errors='replace')
             m = re.search(
                 r'<meta[^>]+property=["\']og:image["\'][^>]+'
-                r'content=["\']([^"\']+)["\']',
-                html, re.IGNORECASE
+                r'content=["\']([^"\']+)["\']', html, re.IGNORECASE
             )
             if not m:
                 m = re.search(
                     r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+'
-                    r'property=["\']og:image["\']',
-                    html, re.IGNORECASE
+                    r'property=["\']og:image["\']', html, re.IGNORECASE
                 )
             if m:
                 thumb = m.group(1)
@@ -750,16 +920,11 @@ class FilesterAPI:
                     return (True, None)
                 log(f"Public folder thumb for {folder_id}: {resolved}")
                 return (True, resolved)
-
-            log(f"No og:image found on public page for {folder_id}",
-                xbmc.LOGDEBUG)
+            log(f"No og:image on public page for {folder_id}", xbmc.LOGDEBUG)
             return (True, None)
-
         except urllib.error.HTTPError as e:
             log(f"Public folder page HTTP {e.code} for {folder_id}",
                 xbmc.LOGWARNING)
-            # 404/410 mean "this folder has no public page" = definitive.
-            # Other HTTP errors are server-side; treat as transient.
             return (e.code in (404, 410), None)
         except Exception as e:
             log(f"Public folder thumb fetch failed for {folder_id}: {e}",
@@ -778,15 +943,12 @@ class FilesterAPI:
             except Exception as e:
                 log(f"Failed to read image {image_path}: {e}", xbmc.LOGERROR)
                 return None
-
         if not image_data:
             log(f"Empty image data for {image_path}", xbmc.LOGERROR)
             return None
-
         if len(image_data) > MAX_THUMB_SIZE:
             log(f"Image too large: {len(image_data)} bytes", xbmc.LOGERROR)
             return None
-
         ext = image_path.lower().rsplit('.', 1)[-1] if '.' in image_path else 'jpg'
         content_types = {
             'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
@@ -794,18 +956,14 @@ class FilesterAPI:
         }
         content_type = content_types.get(ext, 'application/octet-stream')
         filename = f"thumbnail.{ext}"
-
         boundary = '----KodiFilesterBoundary' + hashlib.md5(
             str(time.time()).encode('utf-8')
         ).hexdigest()
         boundary_bytes = boundary.encode('utf-8')
-
         parts: List[bytes] = []
-
         parts.append(b'--' + boundary_bytes + b'\r\n')
         parts.append(b'Content-Disposition: form-data; name="folder"\r\n\r\n')
         parts.append(folder_id.encode('utf-8') + b'\r\n')
-
         parts.append(b'--' + boundary_bytes + b'\r\n')
         parts.append(
             f'Content-Disposition: form-data; name="thumbnail"; '
@@ -813,11 +971,8 @@ class FilesterAPI:
         )
         parts.append(f'Content-Type: {content_type}\r\n\r\n'.encode('utf-8'))
         parts.append(image_data + b'\r\n')
-
         parts.append(b'--' + boundary_bytes + b'--\r\n')
-
         body = b''.join(parts)
-
         url = f"{API_BASE}/folder/thumbnail"
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',
@@ -826,7 +981,6 @@ class FilesterAPI:
         }
         if self.api_key:
             headers['Authorization'] = f'Bearer {self.api_key}'
-
         try:
             req = urllib.request.Request(
                 url, data=body, headers=headers, method='POST'
@@ -834,22 +988,17 @@ class FilesterAPI:
             with urllib.request.urlopen(req, timeout=UPLOAD_TIMEOUT) as resp:
                 raw = resp.read().decode('utf-8')
             parsed = json.loads(raw)
-
             if not parsed.get('success'):
                 log(f"Upload API error: {parsed.get('message', 'Unknown')}",
                     xbmc.LOGERROR)
                 return None
-
             thumb_path = (parsed.get('data') or {}).get('thumbnail_url')
             if not thumb_path:
-                log("Upload succeeded but no thumbnail_url in response",
-                    xbmc.LOGERROR)
+                log("Upload succeeded but no thumbnail_url", xbmc.LOGERROR)
                 return None
-
             resolved = absolute_thumb_url(thumb_path)
             log(f"Folder thumb upload OK: {resolved}")
             return resolved
-
         except urllib.error.HTTPError as e:
             body_text = ''
             try:
@@ -868,24 +1017,20 @@ class FilesterAPI:
             slug = details.get('slug')
             if not slug:
                 raise ValueError("File slug missing from API metadata")
-
             view = self.request(
                 PUBLIC_VIEW_URL, method='POST', data={"file_slug": slug}
             )
-
             server = view.get('server') or 'https://cn1.filester.me'
             file_path = view.get('file')
             token_raw = view.get('token') or ''
-
             if not file_path or not token_raw:
-                raise ValueError("Missing file path or token in API response")
-
+                raise ValueError("Missing file path or token")
             token = urllib.parse.quote(token_raw, safe='')
             url = f"{server}/v2/{file_path}?token={token}"
             return f"{url}|User-Agent={USER_AGENT}&Connection=keep-alive"
-
         except Exception as e:
-            log(f"Failed to build stream URL for {file_id}: {e}", xbmc.LOGERROR)
+            log(f"Failed to build stream URL for {file_id}: {e}",
+                xbmc.LOGERROR)
             return None
 
     def create_folder(self, name: str,
@@ -903,11 +1048,8 @@ class FilesterAPI:
 
     def delete_file(self, file_id: str) -> bool:
         try:
-            self.request(
-                f"{API_ROOT}/file/delete",
-                method='POST',
-                data={"identifiers": [file_id]},
-            )
+            self.request(f"{API_ROOT}/file/delete", method='POST',
+                          data={"identifiers": [file_id]})
             return True
         except Exception as e:
             log(f"Delete file {file_id} failed: {e}", xbmc.LOGERROR)
@@ -915,12 +1057,10 @@ class FilesterAPI:
 
     def delete_folder(self, folder_id: str) -> bool:
         try:
-            self.request(
-                f"{API_ROOT}/folder/delete",
-                method='POST',
-                data={"identifiers": [folder_id]},
-            )
+            self.request(f"{API_ROOT}/folder/delete", method='POST',
+                          data={"identifiers": [folder_id]})
             self.invalidate_folders_cache()
+            self.invalidate_folder_thumb(folder_id)
             return True
         except Exception as e:
             log(f"Delete folder {folder_id} failed: {e}", xbmc.LOGERROR)
@@ -945,7 +1085,7 @@ class FilesterAPI:
         }
         try:
             self.request(f"{API_BASE}/folder/move",
-                         method='POST', data=payload)
+                          method='POST', data=payload)
             self.invalidate_folders_cache()
             return True
         except Exception as e:
@@ -953,7 +1093,8 @@ class FilesterAPI:
             return False
 
     def create_folder_and_move(self, name: str, file_id: str,
-                                parent_id: Optional[str] = None) -> Optional[str]:
+                                parent_id: Optional[str] = None
+                                ) -> Optional[str]:
         new_id = self.create_folder(name, parent_id=parent_id)
         if not new_id:
             return None
@@ -969,7 +1110,6 @@ class FilesterAPI:
             self._inflight.clear()
         with self._reval_lock:
             self._revalidating.clear()
-
         deleted = 0
         try:
             if xbmcvfs.exists(CACHE_DIR):
@@ -980,7 +1120,7 @@ class FilesterAPI:
                             xbmcvfs.delete(os.path.join(CACHE_DIR, name))
                             deleted += 1
                         except Exception as e:
-                            log(f"Failed to delete cache file {name}: {e}")
+                            log(f"Failed to delete cache {name}: {e}")
                 for d in dirs:
                     try:
                         sub_dirs, sub_files = xbmcvfs.listdir(
@@ -1009,25 +1149,14 @@ class DirectoryHandler:
         self.api = api
         self.handle = HANDLE
         self._all_folders: Optional[List[Dict[str, Any]]] = None
-        self._folder_cache_time: float = 0.0
-
-    def _apply_view_mode(self) -> None:
-        try:
-            view_id = (ADDON.getSetting('default_view') or '').strip()
-            if view_id and view_id != '0':
-                xbmc.sleep(100)
-                xbmc.executebuiltin(f"Container.SetViewMode({view_id})")
-        except Exception as e:
-            log(f"View mode set failed: {e}")
+        self._folder_fetch_lock = threading.Lock()
+        self._folder_fetch_inflight: set = set()
 
     @staticmethod
     def _sort_folders(folders: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Alphabetical, case-insensitive."""
         try:
-            return sorted(
-                folders,
-                key=lambda f: (f.get('name') or '').lower(),
-            )
+            return sorted(folders,
+                          key=lambda f: (f.get('name') or '').lower())
         except Exception as e:
             log(f"Folder sort failed: {e}", xbmc.LOGWARNING)
             return folders
@@ -1035,14 +1164,11 @@ class DirectoryHandler:
     @staticmethod
     def _sort_files(files: List[Dict[str, Any]],
                     by_date_desc: bool) -> List[Dict[str, Any]]:
-        """by_date_desc=True -> newest first (root).
-           by_date_desc=False -> alphabetical A-Z (inside folders)."""
         if not files:
             return files
-
         DATE_FIELDS = ('created_at', 'upload_date', 'uploaded_at', 'created')
 
-        def date_str(f: Dict[str, Any]) -> str:
+        def date_str(f):
             for field in DATE_FIELDS:
                 val = f.get(field)
                 if val:
@@ -1050,7 +1176,7 @@ class DirectoryHandler:
                     return s.split('.')[0]
             return ''
 
-        def numeric_id(f: Dict[str, Any]) -> int:
+        def numeric_id(f):
             try:
                 return int(f.get('id') or 0)
             except (ValueError, TypeError):
@@ -1058,37 +1184,34 @@ class DirectoryHandler:
 
         try:
             if by_date_desc:
-                # Sort by (date, id) descending. Same-day uploads tie on
-                # created_at (it's always midnight), so id desc breaks the
-                # tie and gives a stable newest-first order.
-                return sorted(
-                    files,
-                    key=lambda f: (date_str(f), numeric_id(f)),
-                    reverse=True,
-                )
-
+                return sorted(files,
+                              key=lambda f: (date_str(f), numeric_id(f)),
+                              reverse=True)
             return sorted(
                 files,
                 key=lambda f: (f.get('name')
-                               or f.get('original_name') or '').lower(),
+                               or f.get('original_name') or '').lower()
             )
         except Exception as e:
             log(f"File sort failed: {e}", xbmc.LOGWARNING)
             return files
 
     @staticmethod
-    def _parent_id(folder: Dict[str, Any]) -> Optional[str]:
+    def _parent_id(folder):
         parent = folder.get('parent')
         if parent in (None, '', 0, '0'):
             return None
         return str(parent)
 
     @staticmethod
-    def _folder_id(folder: Dict[str, Any]) -> Optional[str]:
+    def _folder_id(folder):
         fid = folder.get('id')
         return str(fid) if fid is not None else None
 
-    def _get_all_folders(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
+    def _get_all_folders(self, force_refresh: bool = False
+                          ) -> List[Dict[str, Any]]:
+        if not force_refresh and self._all_folders is not None:
+            return self._all_folders
         if force_refresh:
             self.api.invalidate_folders_cache()
         try:
@@ -1096,16 +1219,14 @@ class DirectoryHandler:
         except Exception as e:
             log(f"get_folders failed: {e}", xbmc.LOGERROR)
             if self._all_folders is not None:
-                log("Using stale folder list after failure", xbmc.LOGWARNING)
                 return self._all_folders
             raise
         return self._all_folders
 
     def _invalidate_folder_list(self) -> None:
         self._all_folders = None
-        self._folder_cache_time = 0.0
 
-    def _folder_name_by_id(self, folder_id: Any) -> Optional[str]:
+    def _folder_name_by_id(self, folder_id):
         if not folder_id:
             return None
         try:
@@ -1117,13 +1238,8 @@ class DirectoryHandler:
             log(f"Folder name lookup failed for {folder_id}: {e}")
         return None
 
-    def _build_folder_tree(
-        self,
-        folders: List[Dict[str, Any]],
-        parent_id: Optional[str] = None,
-        level: int = 0,
-    ) -> List[Tuple[str, str]]:
-        out: List[Tuple[str, str]] = []
+    def _build_folder_tree(self, folders, parent_id=None, level=0):
+        out = []
         for folder in folders:
             if self._parent_id(folder) == parent_id:
                 fid = self._folder_id(folder)
@@ -1135,9 +1251,7 @@ class DirectoryHandler:
                 out.extend(self._build_folder_tree(folders, fid, level + 1))
         return out
 
-    def _descendant_ids(self, folder_id: str) -> set:
-        """Return folder_id plus all descendants, so a folder can't be
-        moved into itself or one of its children."""
+    def _descendant_ids(self, folder_id):
         out = {str(folder_id)}
         changed = True
         while changed:
@@ -1151,110 +1265,116 @@ class DirectoryHandler:
                     changed = True
         return out
 
-    def _thumb_for(self, item: Dict[str, Any]) -> Optional[str]:
+    def _thumb_for(self, item):
         inline = inline_thumbnail(item)
         if inline:
             return inline
-
         file_id = item.get('id')
         if not file_id:
             return None
-
         known, url = self.api.cached_thumbnail(str(file_id))
         return url if known else None
 
-    def _get_folder_thumbnail(self, folder_id: str) -> Optional[str]:
-        """Resolve a folder thumbnail from Filester.
-
-        Priority:
-          1. Session in-memory cache (within this Kodi run)
-          2. thumbnail field on the folder object from the API (if ever added)
-          3. Public folder page og:image meta tag
-
-        Negative results from a definitive server response are cached too,
-        so folders with no thumb don't re-hit the public page on every list
-        draw. Transient network failures are NOT cached, so a thumbnail can
-        appear later once connectivity recovers.
-        """
+    def _get_folder_thumbnail(self, folder_id, context_folder_id=None):
         fid = str(folder_id)
-
-        cached = session_get_thumb(fid)
-        if cached == SESSION_THUMB_NONE:
-            log(f"Thumb for {fid}: session cache (none)")
+        known, url = self.api.cached_folder_thumb(fid)
+        if known:
+            return url
+        session = session_get_thumb(fid)
+        if session == SESSION_THUMB_NONE:
             return None
-        if cached:
-            log(f"Thumb for {fid}: session cache")
-            return cached
-
-        for f in self._get_all_folders():
-            if self._folder_id(f) != fid:
-                continue
-            api_thumb = extract_folder_thumb(f)
-            if api_thumb:
-                log(f"Thumb for {fid}: API folder field -> {api_thumb}")
-                session_set_thumb(fid, api_thumb)
-                return api_thumb
-            break
-
-        definitive, web_thumb = self.api.fetch_public_folder_thumb(fid)
-        if web_thumb:
-            session_set_thumb(fid, web_thumb)
-            return web_thumb
-
-        if definitive:
-            log(f"Thumb for {fid}: none found (cached)")
-            session_set_thumb(fid, SESSION_THUMB_NONE)
-        else:
-            log(f"Thumb for {fid}: fetch failed, will retry next time")
+        if session:
+            return session
+        self._schedule_folder_thumb_fetch(fid, context_folder_id)
         return None
 
-    def add_new_folder_item(self, parent_id: Optional[str]) -> None:
+    def _schedule_folder_thumb_fetch(self, folder_id, context_folder_id):
+        with self._folder_fetch_lock:
+            if folder_id in self._folder_fetch_inflight:
+                return
+            self._folder_fetch_inflight.add(folder_id)
+        threading.Thread(
+            target=self._folder_thumb_worker,
+            args=(folder_id, context_folder_id),
+            daemon=True,
+        ).start()
+
+    def _folder_thumb_worker(self, folder_id, context_folder_id):
+        added = False
+        try:
+            with self.api._folder_thumb_sem:
+                got_api_thumb = False
+                for f in self._get_all_folders():
+                    if self._folder_id(f) == folder_id:
+                        api_thumb = extract_folder_thumb(f)
+                        if api_thumb:
+                            log(f"Thumb for {folder_id}: API field "
+                                f"-> {api_thumb}")
+                            self.api.cache_folder_thumb(folder_id, api_thumb)
+                            session_set_thumb(folder_id, api_thumb)
+                            got_api_thumb = True
+                            added = True
+                        break
+                if not got_api_thumb:
+                    definitive, web_thumb = \
+                        self.api.fetch_public_folder_thumb(folder_id)
+                    if not web_thumb and not definitive:
+                        time.sleep(1.0)
+                        definitive, web_thumb = \
+                            self.api.fetch_public_folder_thumb(folder_id)
+                    if web_thumb:
+                        self.api.cache_folder_thumb(folder_id, web_thumb)
+                        session_set_thumb(folder_id, web_thumb)
+                        added = True
+                    elif definitive:
+                        self.api.cache_folder_thumb(folder_id, None)
+                        session_set_thumb(folder_id, SESSION_THUMB_NONE)
+                    else:
+                        log(f"Thumb for {folder_id}: fetch failed after retry")
+        except Exception as e:
+            log(f"Folder thumb fetch failed for {folder_id}: {e}",
+                xbmc.LOGWARNING)
+        finally:
+            with self._folder_fetch_lock:
+                self._folder_fetch_inflight.discard(folder_id)
+        if added:
+            _debounced_refresh_container(context_folder_id,
+                                          debounce_seconds=1.5)
+
+    def add_new_folder_item(self, parent_id):
         if not setting_bool('show_new_folder_item', default=False):
             return
-
         label = "[B]➕ New Subfolder[/B]" if parent_id else "[B]➕ New Folder[/B]"
         item = xbmcgui.ListItem(label=label)
         info_tag = item.getVideoInfoTag()
         info_tag.setTitle(label)
         info_tag.setMediaType('video')
-
-        item.setArt({'icon': self.NEW_FOLDER_ICON, 'thumb': self.NEW_FOLDER_ICON})
-
-        params: Dict[str, Any] = {'action': 'create_folder'}
+        item.setArt({'icon': self.NEW_FOLDER_ICON,
+                     'thumb': self.NEW_FOLDER_ICON})
+        params = {'action': 'create_folder'}
         if parent_id:
             params['parent_id'] = parent_id
-
         xbmcplugin.addDirectoryItem(
-            handle=self.handle,
-            url=build_url(params),
-            listitem=item,
-            isFolder=False,
+            handle=self.handle, url=build_url(params),
+            listitem=item, isFolder=False
         )
 
-    def add_folder_item(self, folder: Dict[str, Any]) -> None:
+    def add_folder_item(self, folder, context_folder_id=None):
         folder_id = self._folder_id(folder)
         if folder_id is None:
             return
         name = folder.get('name', 'Unnamed Folder')
-
         item = xbmcgui.ListItem(label=name)
         info_tag = item.getVideoInfoTag()
         info_tag.setTitle(name)
         info_tag.setMediaType('video')
-
-        thumb = self._get_folder_thumbnail(folder_id)
-        log(f"Folder item {folder_id} '{name}' -> "
-            f"thumb={'set' if thumb else 'default'}")
+        thumb = self._get_folder_thumbnail(folder_id, context_folder_id)
         if thumb:
-            item.setArt({
-                'thumb': thumb,
-                'poster': thumb,
-                'icon': thumb,
-                'banner': thumb,
-            })
+            item.setArt({'thumb': thumb, 'poster': thumb,
+                         'icon': thumb, 'banner': thumb})
         else:
-            item.setArt({'icon': self.FOLDER_ICON, 'thumb': self.FOLDER_ICON})
-
+            item.setArt({'icon': self.FOLDER_ICON,
+                         'thumb': self.FOLDER_ICON})
         item.addContextMenuItems([
             ("Set Thumbnail…",
              f"RunPlugin({build_url({'action': 'set_folder_thumbnail', 'folder_id': folder_id})})"),
@@ -1267,106 +1387,85 @@ class DirectoryHandler:
             ("Delete Folder",
              f"RunPlugin({build_url({'action': 'delete_folder', 'folder_id': folder_id})})"),
         ], replaceItems=False)
-
         xbmcplugin.addDirectoryItem(
             handle=self.handle,
             url=build_url({'action': 'list', 'folder_id': folder_id}),
-            listitem=item,
-            isFolder=True,
+            listitem=item, isFolder=True
         )
 
-    def add_file_item(self, file: Dict[str, Any],
-                      current_folder_name: Optional[str] = None,
-                      current_folder_id: Optional[str] = None) -> None:
+    def add_file_item(self, file, current_folder_name=None,
+                      current_folder_id=None):
         name = file.get('name') or file.get('original_name') or 'Unknown'
         file_id = file.get('id')
-
         file_folder_id = file.get('folder_id')
-        folder_label: Optional[str] = None
+        folder_label = None
         if file_folder_id:
-            folder_label = self._folder_name_by_id(file_folder_id)
-
+            if current_folder_id and str(file_folder_id) == str(current_folder_id):
+                folder_label = current_folder_name
+            else:
+                folder_label = self._folder_name_by_id(file_folder_id)
         item = xbmcgui.ListItem(label=name)
         info_tag = item.getVideoInfoTag()
         info_tag.setTitle(name)
         info_tag.setMediaType('video')
-
         upload_date = parse_upload_date(file.get('upload_date'))
         if upload_date:
             try:
                 info_tag.setDateAdded(upload_date)
             except Exception:
                 pass
-
         plot = build_plot(file)
         if plot:
             info_tag.setPlot(plot)
-
         item.setProperty("IsPlayable", "true")
-
         if folder_label:
             item.setProperty(self.PROP_FOLDER_NAME, folder_label)
-
         thumb = self._thumb_for(file)
         if thumb:
             item.setArt({'thumb': thumb, 'poster': thumb, 'icon': thumb})
         else:
             item.setArt({'icon': self.VIDEO_ICON})
-
-        menu: List[Tuple[str, str]] = []
-
+        menu = []
         if file_folder_id and str(file_folder_id) != str(current_folder_id or ''):
             menu.append((
                 "Go to Folder",
                 f"Container.Update({build_url({'action': 'list', 'folder_id': file_folder_id})})",
             ))
-
         menu.append((
             "Move to Folder…",
             f"RunPlugin({build_url({'action': 'move_file_prompt', 'file_id': file_id})})",
         ))
-
-        new_folder_params: Dict[str, Any] = {
-            'action': 'move_to_new_folder',
-            'file_id': file_id,
-        }
+        new_folder_params = {'action': 'move_to_new_folder', 'file_id': file_id}
         if current_folder_id:
             new_folder_params['parent_id'] = current_folder_id
         menu.append((
             "Move to New Folder…",
             f"RunPlugin({build_url(new_folder_params)})",
         ))
-
         menu.append((
             "Delete File",
             f"RunPlugin({build_url({'action': 'delete_file', 'file_id': file_id})})",
         ))
-
         item.addContextMenuItems(menu, replaceItems=False)
-
         xbmcplugin.addDirectoryItem(
             handle=self.handle,
             url=build_url({'action': 'play', 'id': file_id}),
-            listitem=item,
-            isFolder=False,
+            listitem=item, isFolder=False
         )
 
-    def add_next_page_item(self, action: str, page: int, **extra: Any) -> None:
+    def add_next_page_item(self, action, page, **extra):
         item = xbmcgui.ListItem(label="[B]Next Page >>[/B]")
         info_tag = item.getVideoInfoTag()
         info_tag.setTitle("Next Page")
         info_tag.setMediaType('video')
-
         params = {'action': action, 'page': page + 1, **extra}
         xbmcplugin.addDirectoryItem(
-            handle=self.handle,
-            url=build_url(params),
-            listitem=item,
-            isFolder=True,
+            handle=self.handle, url=build_url(params),
+            listitem=item, isFolder=True
         )
 
     @staticmethod
-    def _has_next_page(response: Dict[str, Any], page: int = 1) -> bool:
+    def _has_next_page(response, page=1):
         pagination = response.get('pagination') or {}
         if pagination:
             current = pagination.get('page') or page
@@ -1375,15 +1474,14 @@ class DirectoryHandler:
         files = response.get('data') or []
         return len(files) >= PER_PAGE
 
-    def _files_needing_fetch(self, files: List[Dict[str, Any]]) -> List[str]:
-        out: List[str] = []
+    def _files_needing_fetch(self, files):
+        out = []
         for f in files:
             fid = f.get('id')
             if not fid:
                 continue
             if inline_thumbnail(f):
                 continue
-            # API says no thumbnail exists — no point fetching details
             if _is_false(f.get('has_thumbnail')):
                 continue
             known, _ = self.api.cached_thumbnail(str(fid))
@@ -1391,82 +1489,58 @@ class DirectoryHandler:
                 out.append(str(fid))
         return out
 
-    def _prefetch_thumbnails(self, file_ids: List[str]) -> None:
+    def _schedule_thumbnail_prefetch(self, file_ids, context_folder_id=None):
         if not file_ids:
             return
 
-        total = len(file_ids)
-        done = 0
-        cancel = threading.Event()
-
-        progress = xbmcgui.DialogProgress()
-        progress.create("Filester", "Loading thumbnails…")
-
-        def worker(file_id: str) -> None:
-            if cancel.is_set():
-                return
+        def worker():
+            succeeded = 0
+            pool = ThreadPoolExecutor(max_workers=THUMB_FETCH_WORKERS)
             try:
-                self.api.thumbnail_for_file(file_id)
-            except Exception as e:
-                log(f"Thumbnail prefetch failed for {file_id}: {e}",
-                    xbmc.LOGWARNING)
+                futures = [pool.submit(self.api.thumbnail_for_file, fid)
+                           for fid in file_ids]
+                for fut in as_completed(futures):
+                    try:
+                        if fut.result():
+                            succeeded += 1
+                    except Exception:
+                        pass
+            finally:
+                pool.shutdown(wait=False)
+            log(f"Thumbnail prefetch: {succeeded}/{len(file_ids)} ready")
+            if succeeded:
+                _debounced_refresh_container(context_folder_id,
+                                              debounce_seconds=1.0)
 
-        pool = ThreadPoolExecutor(max_workers=THUMB_FETCH_WORKERS)
-        try:
-            futures = [pool.submit(worker, fid) for fid in file_ids]
-            for fut in as_completed(futures):
-                done += 1
-                if progress.iscanceled():
-                    cancel.set()
-                    break
-                pct = int(done / total * 100)
-                progress.update(pct, f"Loading thumbnails ({done}/{total})")
-                try:
-                    fut.result()
-                except Exception:
-                    pass
-        finally:
-            pool.shutdown(wait=False)
-            try:
-                progress.close()
-            except Exception:
-                pass
+        threading.Thread(target=worker, daemon=True).start()
 
-    def list_directory(self, folder_id: Optional[str] = None, page: int = 1) -> None:
+    def list_directory(self, folder_id=None, page=1):
         xbmcplugin.setContent(self.handle, 'videos')
         started = time.time()
-
         at_root = folder_id in (None, '', '0')
-        MAX_SORT_PAGES = 20  # safety cap: 20 pages × 100 = 2000 files max
-
+        MAX_SORT_PAGES = 20
         try:
             folders = self._get_all_folders()
-
             if page == 1:
                 self.add_new_folder_item(str(folder_id) if folder_id else None)
-
                 target_parent = str(folder_id) if folder_id else None
                 visible_folders = [
                     f for f in folders if self._parent_id(f) == target_parent
                 ]
                 visible_folders = self._sort_folders(visible_folders)
                 for f in visible_folders:
-                    self.add_folder_item(f)
-
+                    self.add_folder_item(f, context_folder_id=folder_id)
             current_folder_id = str(folder_id) if folder_id else None
             current_folder_name = (self._folder_name_by_id(folder_id)
                                    if folder_id else None)
-
-            # ---- Fetch every page so sorting is global, not per-page ----
-            # Guard against APIs that ignore the page param and return the
-            # same batch repeatedly (observed on the folder-scoped endpoint).
-            all_files: List[Dict[str, Any]] = []
+            all_files = []
             seen_ids = set()
             fetch_page = 1
             pages_fetched = 0
             while fetch_page <= MAX_SORT_PAGES:
                 response = (self.api.get_folder_files(folder_id, fetch_page)
-                            if folder_id else self.api.get_files(fetch_page))
+                            if folder_id
+                            else self.api.get_files(fetch_page))
                 batch = response.get('data') or []
                 if not batch:
                     break
@@ -1481,63 +1555,48 @@ class DirectoryHandler:
                     all_files.append(item)
                     new_items += 1
                 if new_items == 0:
-                    log(f"Pagination stalled at page {fetch_page} "
-                        f"(no new items) — stopping", xbmc.LOGWARNING)
+                    log(f"Pagination stalled at page {fetch_page}", xbmc.LOGWARNING)
                     break
                 if not self._has_next_page(response, fetch_page):
                     break
                 fetch_page += 1
-
-            log(f"Fetched {pages_fetched} page(s), "
-                f"{len(all_files)} unique file(s)", xbmc.LOGDEBUG)
-
-            # Root -> newest first; inside any folder -> A-Z
+            log(f"Fetched {pages_fetched} page(s), {len(all_files)} unique",
+                xbmc.LOGDEBUG)
             all_files = self._sort_files(all_files, by_date_desc=at_root)
-
-            # ---- Slice the sorted list back into Kodi's page size ----
             start = (page - 1) * PER_PAGE
             files = all_files[start:start + PER_PAGE]
             has_next = (start + PER_PAGE) < len(all_files)
-
             to_fetch = self._files_needing_fetch(files)
             if to_fetch:
-                self._prefetch_thumbnails(to_fetch)
-
+                self._schedule_thumbnail_prefetch(
+                    to_fetch, context_folder_id=folder_id
+                )
             if time.time() - started > DOS_WARN_SECONDS:
                 notify("Filester", "Service slow — may be under load",
                        xbmcgui.NOTIFICATION_WARNING)
-
             for file in files:
-                self.add_file_item(
-                    file,
-                    current_folder_name=current_folder_name,
-                    current_folder_id=current_folder_id,
-                )
-
+                self.add_file_item(file,
+                                    current_folder_name=current_folder_name,
+                                    current_folder_id=current_folder_id)
             if has_next:
                 extra = {'folder_id': folder_id} if folder_id else {}
                 self.add_next_page_item('list', page, **extra)
-
             xbmcplugin.endOfDirectory(self.handle, succeeded=True)
-            self._apply_view_mode()
-
         except Exception as e:
             log(f"Listing failed: {e}\n{traceback.format_exc()}", xbmc.LOGERROR)
             notify("Filester", f"Folder Error: {str(e)[:40]}",
                    xbmcgui.NOTIFICATION_ERROR)
             xbmcplugin.endOfDirectory(self.handle, succeeded=False)
 
-    def play_file(self, file_id: Optional[str]) -> None:
+    def play_file(self, file_id):
         if not file_id:
             notify("Filester", "Missing file id", xbmcgui.NOTIFICATION_ERROR)
             xbmcplugin.setResolvedUrl(self.handle, False, xbmcgui.ListItem())
             return
-
         try:
             stream_url = self.api.get_stream_url(file_id)
             if not stream_url:
                 raise ValueError("Could not generate stream URL")
-
             item = xbmcgui.ListItem(path=stream_url)
             item.setProperty("IsPlayable", "true")
             xbmcplugin.setResolvedUrl(self.handle, True, item)
@@ -1546,8 +1605,7 @@ class DirectoryHandler:
             notify("Playback Error", str(e)[:50], xbmcgui.NOTIFICATION_ERROR)
             xbmcplugin.setResolvedUrl(self.handle, False, xbmcgui.ListItem())
 
-    def _prompt_folder_name(self, title: str,
-                            initial: str = "") -> Optional[str]:
+    def _prompt_folder_name(self, title, initial=""):
         name = xbmcgui.Dialog().input(
             title, defaultt=initial, type=xbmcgui.INPUT_ALPHANUM
         )
@@ -1563,12 +1621,11 @@ class DirectoryHandler:
             return None
         return name
 
-    def create_folder_prompt(self, parent_id: Optional[str]) -> None:
+    def create_folder_prompt(self, parent_id):
         title = "New Subfolder" if parent_id else "New Folder"
         name = self._prompt_folder_name(title)
         if not name:
             return
-
         new_id = self.api.create_folder(name, parent_id=parent_id)
         if new_id:
             self._invalidate_folder_list()
@@ -1578,36 +1635,30 @@ class DirectoryHandler:
             notify("Filester", "Failed to create folder",
                    xbmcgui.NOTIFICATION_ERROR)
 
-    def refresh_folder(self, folder_id: Optional[str]) -> None:
+    def refresh_folder(self, folder_id):
         if not folder_id:
             return
         self.api.invalidate_folder_files(folder_id)
+        self.api.invalidate_folder_thumb(str(folder_id))
         self._invalidate_folder_list()
         session_clear_thumb(str(folder_id))
         notify("Filester", "Folder refreshed")
         refresh_container()
 
-    def set_folder_thumbnail(self, folder_id: Optional[str]) -> None:
+    def set_folder_thumbnail(self, folder_id):
         if not folder_id:
             return
-
         image_path = xbmcgui.Dialog().browse(
-            2,
-            "Select an image for the folder thumbnail",
-            'files',
-            '.jpg|.jpeg|.png|.gif|.webp',
-            False,
-            False,
+            2, "Select an image for the folder thumbnail", 'files',
+            '.jpg|.jpeg|.png|.gif|.webp', False, False,
         )
         if not image_path:
             return
-
         lower = image_path.lower()
         if not lower.endswith(ALLOWED_IMAGE_EXTS):
-            notify("Filester", "Please choose a JPG, PNG, GIF or WebP image",
+            notify("Filester", "Please choose a JPG, PNG, GIF or WebP",
                    xbmcgui.NOTIFICATION_ERROR)
             return
-
         try:
             size = xbmcvfs.Stat(image_path).st_size()
         except Exception:
@@ -1616,25 +1667,22 @@ class DirectoryHandler:
             notify("Filester", "Image is larger than 5 MB",
                    xbmcgui.NOTIFICATION_ERROR)
             return
-
         notify("Filester", "Uploading thumbnail…")
-
         url = self.api.upload_folder_thumbnail(folder_id, image_path)
         if not url:
             notify("Filester", "Failed to upload thumbnail",
                    xbmcgui.NOTIFICATION_ERROR)
             return
-
         log(f"Uploaded folder thumb for {folder_id}: {url}")
-
         session_clear_thumb(str(folder_id))
+        self.api.invalidate_folder_thumb(str(folder_id))
+        self.api.cache_folder_thumb(str(folder_id), url)
         self.api.invalidate_folders_cache()
         self._invalidate_folder_list()
-
         notify("Filester", "Folder thumbnail updated")
         refresh_container()
 
-    def delete_folder(self, folder_id: Optional[str]) -> None:
+    def delete_folder(self, folder_id):
         if not folder_id:
             return
         if not xbmcgui.Dialog().yesno(
@@ -1650,7 +1698,7 @@ class DirectoryHandler:
             notify("Filester", "Failed to delete folder",
                    xbmcgui.NOTIFICATION_ERROR)
 
-    def delete_file(self, file_id: Optional[str]) -> None:
+    def delete_file(self, file_id):
         if not file_id:
             return
         if not xbmcgui.Dialog().yesno("Filester", "Delete this file?"):
@@ -1659,17 +1707,15 @@ class DirectoryHandler:
             notify("Filester", "File deleted")
             refresh_container()
         else:
-            notify("Filester", "Failed to delete file", xbmcgui.NOTIFICATION_ERROR)
+            notify("Filester", "Failed to delete file",
+                   xbmcgui.NOTIFICATION_ERROR)
 
-    def move_to_new_folder_prompt(self, file_id: Optional[str],
-                                  parent_id: Optional[str] = None) -> None:
+    def move_to_new_folder_prompt(self, file_id, parent_id=None):
         if not file_id:
             return
-
         name = self._prompt_folder_name("New Folder")
         if not name:
             return
-
         new_id = self.api.create_folder_and_move(
             name, file_id, parent_id=parent_id
         )
@@ -1681,51 +1727,44 @@ class DirectoryHandler:
             notify("Filester", "Failed to create folder and move file",
                    xbmcgui.NOTIFICATION_ERROR)
 
-    def move_file_prompt(self, file_id: Optional[str]) -> None:
+    def move_file_prompt(self, file_id):
         if not file_id:
             return
-
-        folders = self._get_all_folders()
-        if not folders:
-            notify("Filester", "No folders available", xbmcgui.NOTIFICATION_ERROR)
-            return
-
-        tree = self._build_folder_tree(folders)
-        display = ["[Root]"] + [name for _, name in tree]
-        ids = [""] + [fid for fid, _ in tree]
-
-        idx = xbmcgui.Dialog().select("Move to folder", display)
-        if idx < 0:
-            return
-
-        target = ids[idx] or None
-        if self.api.move_file(file_id, target):
-            notify("Filester", "File moved")
-            refresh_container()
-        else:
-            notify("Filester", "Failed to move file", xbmcgui.NOTIFICATION_ERROR)
-
-    def move_folder_prompt(self, folder_id: Optional[str]) -> None:
-        if not folder_id:
-            return
-
         folders = self._get_all_folders()
         if not folders:
             notify("Filester", "No folders available",
                    xbmcgui.NOTIFICATION_ERROR)
             return
+        tree = self._build_folder_tree(folders)
+        display = ["[Root]"] + [name for _, name in tree]
+        ids = [""] + [fid for fid, _ in tree]
+        idx = xbmcgui.Dialog().select("Move to folder", display)
+        if idx < 0:
+            return
+        target = ids[idx] or None
+        if self.api.move_file(file_id, target):
+            notify("Filester", "File moved")
+            refresh_container()
+        else:
+            notify("Filester", "Failed to move file",
+                   xbmcgui.NOTIFICATION_ERROR)
 
+    def move_folder_prompt(self, folder_id):
+        if not folder_id:
+            return
+        folders = self._get_all_folders()
+        if not folders:
+            notify("Filester", "No folders available",
+                   xbmcgui.NOTIFICATION_ERROR)
+            return
         excluded = self._descendant_ids(str(folder_id))
         tree = [(fid, name) for fid, name in self._build_folder_tree(folders)
                 if fid not in excluded]
-
         display = ["[Root]"] + [name for _, name in tree]
         ids = [""] + [fid for fid, _ in tree]
-
         idx = xbmcgui.Dialog().select("Move folder to", display)
         if idx < 0:
             return
-
         target = ids[idx] or None
         if self.api.move_folder(folder_id, target):
             self._invalidate_folder_list()
@@ -1737,7 +1776,7 @@ class DirectoryHandler:
 
 
 # ---------------------------------------------------------------------------
-# Reset settings helper
+# Reset settings
 # ---------------------------------------------------------------------------
 def reset_settings() -> None:
     ADDON.setSetting('api_key', '')
@@ -1770,22 +1809,17 @@ LIST_ACTIONS = {None, "", "list"}
 
 def main() -> None:
     api = FilesterAPI()
-
     params = dict(urllib.parse.parse_qsl(sys.argv[2][1:])) if len(sys.argv) > 2 else {}
     action = params.get("action")
     mode = params.get("mode")
-
     if mode == "reset_settings":
         reset_settings()
         return
-
     if action in LIST_ACTIONS and api.cache_enabled:
         threading.Thread(
             target=background_prefetch, args=(api,), daemon=True
         ).start()
-
     handler = DirectoryHandler(api)
-
     try:
         if action == "play":
             handler.play_file(params.get("id"))
