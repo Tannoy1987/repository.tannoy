@@ -14,6 +14,30 @@
             <icon>icon.png</icon>
         </assets>
     </extension>
+</addon><addon id="plugin.video.filesterAI" version="1.0.0" name="FilesterAI" provider-name="FilesterAI">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0" />
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="main.py">
+    <provides>video</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Browse, play and manage your Filester cloud files</summary>
+    <description lang="en_GB">Browse folders and files on Filester (u1.filester.me API v1), play videos with one click, search, sort, create / move / delete folders and files, set folder thumbnails, and view file details. Bring your own API key. Implements every endpoint in the Filester API reference: folders list, files list (with working pagination), folder/files listing, single-file details (slug), folder create, folder thumbnail upload, file+folder delete, file+folder move, public stream resolver, and public folder og:image thumbnails — including all documented workarounds (page-bug dedupe, midnight created_at sort tiebreak, identifier-vs-id, CDN cache-busting, expired-cert bypass, 429 backoff, client-side sorting).</description>
+    <disclaimer lang="en_GB">Requires a Filester API key. Unofficial addon — not affiliated with Filester.</disclaimer>
+    <language>resource.language.en_gb</language>
+    <platform>all</platform>
+    <license>MIT</license>
+    <forum />
+    <website>https://filester.me</website>
+    <source />
+    <email />
+    <assets>
+      <icon>icon.png</icon>
+      <fanart>fanart.jpg</fanart>
+    </assets>
+    <news>1.0.0: Initial release. Full API coverage.</news>
+  </extension>
 </addon><addon id="repository.tannoy1987" name="Tannoy Kodi Repository" version="1.0.3" provider-name="Tannoy">
     <extension point="xbmc.addon.repository" name="Tannoy Kodi Repository">
         <dir>

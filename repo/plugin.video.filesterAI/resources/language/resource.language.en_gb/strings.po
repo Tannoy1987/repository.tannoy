@@ -1,0 +1,288 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Filester 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-01 00:00+0000\n"
+"PO-Revision-Date: 2026-01-01 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: English\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgctxt "#30000"
+msgid "Filester"
+msgstr "Filester"
+
+msgctxt "#30001"
+msgid "Filester Settings"
+msgstr "Filester Settings"
+
+msgctxt "#30002"
+msgid "API Key"
+msgstr "API Key"
+
+msgctxt "#30003"
+msgid "Your Filester API key. Sent as Authorization: Bearer on every request. Get it from your Filester account."
+msgstr "Your Filester API key. Sent as Authorization: Bearer on every request. Get it from your Filester account."
+
+msgctxt "#30004"
+msgid "Items per page"
+msgstr "Items per page"
+
+msgctxt "#30005"
+msgid "API max is 100. Lower values load faster; higher values need fewer page turns."
+msgstr "API max is 100. Lower values load faster; higher values need fewer page turns."
+
+msgctxt "#30006"
+msgid "Default sort"
+msgstr "Default sort"
+
+msgctxt "#30007"
+msgid "Filester API has no sort parameter, so sorting is done inside the addon."
+msgstr "Filester API has no sort parameter, so sorting is done inside the addon."
+
+msgctxt "#30008"
+msgid "Fetch all pages for correct sorting"
+msgstr "Fetch all pages for correct sorting"
+
+msgctxt "#30009"
+msgid "ON: loads every page then sorts (correct order, slower on huge folders). OFF: sorts only the current page (fast, order may be wrong across pages)."
+msgstr "ON: loads every page then sorts (correct order, slower on huge folders). OFF: sorts only the current page (fast, order may be wrong across pages)."
+
+msgctxt "#30010"
+msgid "Folder listing method"
+msgstr "Folder listing method"
+
+msgctxt "#30011"
+msgid "'files-filter' uses GET /files?folder= (pagination works). 'folder-files' uses GET /folder/id/files (has the page-parameter bug; addon dedupes by id)."
+msgstr "'files-filter' uses GET /files?folder= (pagination works). 'folder-files' uses GET /folder/id/files (has the page-parameter bug; addon dedupes by id)."
+
+msgctxt "#30012"
+msgid "CDN cache-buster"
+msgstr "CDN cache-buster"
+
+msgctxt "#30013"
+msgid "Append _t=timestamp plus no-cache headers like the Filester web UI, so refreshes never show stale listings."
+msgstr "Append _t=timestamp plus no-cache headers like the Filester web UI, so refreshes never show stale listings."
+
+msgctxt "#30014"
+msgid "Verify SSL certificates"
+msgstr "Verify SSL certificates"
+
+msgctxt "#30015"
+msgid "Keep ON normally. The u1.filester.me certificate expired in Oct 2026; if you see CERTIFICATE_VERIFY_FAILED, either keep this ON (addon auto-retries unverified once) or turn it OFF."
+msgstr "Keep ON normally. The u1.filester.me certificate expired in Oct 2026; if you see CERTIFICATE_VERIFY_FAILED, either keep this ON (addon auto-retries unverified once) or turn it OFF."
+
+msgctxt "#30016"
+msgid "Auto-retry past expired certificate"
+msgstr "Auto-retry past expired certificate"
+
+msgctxt "#30017"
+msgid "If a request fails with CERTIFICATE_VERIFY_FAILED, retry it once without verification. Turn back off once Filester renews their certificate."
+msgstr "If a request fails with CERTIFICATE_VERIFY_FAILED, retry it once without verification. Turn back off once Filester renews their certificate."
+
+msgctxt "#30018"
+msgid "Show folder thumbnails"
+msgstr "Show folder thumbnails"
+
+msgctxt "#30019"
+msgid "Fetch each folder's public page og:image (the only public way to get auto-generated folder art). Adds one small request per folder; timeouts/5xx are treated as transient, missing og:image means no thumbnail."
+msgstr "Fetch each folder's public page og:image (the only public way to get auto-generated folder art). Adds one small request per folder; timeouts/5xx are treated as transient, missing og:image means no thumbnail."
+
+msgctxt "#30020"
+msgid "Confirm before delete"
+msgstr "Confirm before delete"
+
+msgctxt "#30021"
+msgid "Show a Yes/No dialog before deleting any file or folder."
+msgstr "Show a Yes/No dialog before deleting any file or folder."
+
+msgctxt "#30022"
+msgid "Stream User-Agent"
+msgstr "Stream User-Agent"
+
+msgctxt "#30023"
+msgid "Appended to resolved stream URLs as |User-Agent=... required by Kodi."
+msgstr "Appended to resolved stream URLs as |User-Agent=... required by Kodi."
+
+msgctxt "#30100"
+msgid "Enter API Key"
+msgstr "Enter API Key"
+
+msgctxt "#30101"
+msgid "Please set your Filester API key in addon settings first."
+msgstr "Please set your Filester API key in addon settings first."
+
+msgctxt "#30102"
+msgid "Folders"
+msgstr "Folders"
+
+msgctxt "#30103"
+msgid "Files"
+msgstr "Files"
+
+msgctxt "#30104"
+msgid "All files"
+msgstr "All files"
+
+msgctxt "#30105"
+msgid "Search"
+msgstr "Search"
+
+msgctxt "#30106"
+msgid "New folder…"
+msgstr "New folder…"
+
+msgctxt "#30107"
+msgid "Next page >>"
+msgstr "Next page >>"
+
+msgctxt "#30108"
+msgid "Play"
+msgstr "Play"
+
+msgctxt "#30109"
+msgid "File details"
+msgstr "File details"
+
+msgctxt "#30110"
+msgid "Move…"
+msgstr "Move…"
+
+msgctxt "#30111"
+msgid "Delete"
+msgstr "Delete"
+
+msgctxt "#30112"
+msgid "Set folder thumbnail…"
+msgstr "Set folder thumbnail…"
+
+msgctxt "#30113"
+msgid "Refresh (bust CDN cache)"
+msgstr "Refresh (bust CDN cache)"
+
+msgctxt "#30114"
+msgid "Change sort"
+msgstr "Change sort"
+
+msgctxt "#30115"
+msgid "Sort: Newest"
+msgstr "Sort: Newest"
+
+msgctxt "#30116"
+msgid "Sort: Oldest"
+msgstr "Sort: Oldest"
+
+msgctxt "#30117"
+msgid "Sort: A–Z"
+msgstr "Sort: A–Z"
+
+msgctxt "#30118"
+msgid "Sort: Z–A"
+msgstr "Sort: Z–A"
+
+msgctxt "#30119"
+msgid "Sort: Largest"
+msgstr "Sort: Largest"
+
+msgctxt "#30120"
+msgid "Sort: Smallest"
+msgstr "Sort: Smallest"
+
+msgctxt "#30121"
+msgid "Newest"
+msgstr "Newest"
+
+msgctxt "#30122"
+msgid "Oldest"
+msgstr "Oldest"
+
+msgctxt "#30123"
+msgid "A–Z"
+msgstr "A–Z"
+
+msgctxt "#30124"
+msgid "Z–A"
+msgstr "Z–A"
+
+msgctxt "#30125"
+msgid "Largest"
+msgstr "Largest"
+
+msgctxt "#30126"
+msgid "Smallest"
+msgstr "Smallest"
+
+msgctxt "#30130"
+msgid "Are you sure you want to delete this file?"
+msgstr "Are you sure you want to delete this file?"
+
+msgctxt "#30131"
+msgid "Are you sure you want to delete this folder?"
+msgstr "Are you sure you want to delete this folder?"
+
+msgctxt "#30132"
+msgid "Folder name"
+msgstr "Folder name"
+
+msgctxt "#30133"
+msgid "Move to…"
+msgstr "Move to…"
+
+msgctxt "#30134"
+msgid "[Root]"
+msgstr "[Root]"
+
+msgctxt "#30135"
+msgid "Search files and folders"
+msgstr "Search files and folders"
+
+msgctxt "#30136"
+msgid "Select image (JPG/PNG/GIF/WebP, max 5 MB)"
+msgstr "Select image (JPG/PNG/GIF/WebP, max 5 MB)"
+
+msgctxt "#30137"
+msgid "Image too large (max 5 MB)."
+msgstr "Image too large (max 5 MB)."
+
+msgctxt "#30138"
+msgid "Rate limited (429). Filester allows ~1000 requests/hour. Please wait a few minutes and try again."
+msgstr "Rate limited (429). Filester allows ~1000 requests/hour. Please wait a few minutes and try again."
+
+msgctxt "#30139"
+msgid "Network error. Check your connection and try Refresh."
+msgstr "Network error. Check your connection and try Refresh."
+
+msgctxt "#30140"
+msgid "Resolving stream…"
+msgstr "Resolving stream…"
+
+msgctxt "#30141"
+msgid "Could not resolve stream (missing slug). The file may not be streamable."
+msgstr "Could not resolve stream (missing slug). The file may not be streamable."
+
+msgctxt "#30142"
+msgid "Loading…"
+msgstr "Loading…"
+
+msgctxt "#30143"
+msgid "No items found."
+msgstr "No items found."
+
+msgctxt "#30144"
+msgid "Done."
+msgstr "Done."
+
+msgctxt "#30145"
+msgid "Failed. See Kodi log for details."
+msgstr "Failed. See Kodi log for details."
+
+msgctxt "#30146"
+msgid "SSL certificate error. Enable 'Auto-retry past expired certificate' (or disable verification) in settings — u1.filester.me cert expired Oct 2026."
+msgstr "SSL certificate error. Enable 'Auto-retry past expired certificate' (or disable verification) in settings — u1.filester.me cert expired Oct 2026."
+
+msgctxt "#30147"
+msgid "Showing first %d of %d matches — refine your search to see the rest."
+msgstr "Showing first %d of %d matches — refine your search to see the rest."
