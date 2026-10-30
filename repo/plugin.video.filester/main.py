@@ -345,21 +345,28 @@ def parse_upload_date(raw: Any) -> Optional[str]:
 
 def build_plot(file: Dict[str, Any]) -> Optional[str]:
     parts: List[str] = []
-    album = file.get('album_name')
-    if album:
-        parts.append(f"Album: {album}")
+
     try:
-        size_mb = float(file.get('size_mb') or 0)
-        if size_mb > 0:
-            parts.append(f"Size: {size_mb:.1f} MB")
+        size_bytes = int(file.get('size') or 0)
+        if size_bytes > 0:
+            # use same formatting as the new version
+            for unit in ("B", "KB", "MB", "GB", "TB"):
+                if size_bytes < 1024 or unit == "TB":
+                    parts.append(f"Size: {size_bytes:.1f} {unit}"
+                                 if unit != "B" else f"Size: {size_bytes} B")
+                    break
+                size_bytes /= 1024.0
     except (ValueError, TypeError):
         pass
-    views = file.get('views')
-    if views:
-        parts.append(f"Views: {views}")
+
+    date = str(file.get('created_at') or '')[:10]
+    if date:
+        parts.append(f"Date: {date}")
+
     downloads = file.get('downloads')
     if downloads:
         parts.append(f"Downloads: {downloads}")
+
     return "\n".join(parts) if parts else None
 
 
